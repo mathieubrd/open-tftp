@@ -1,6 +1,6 @@
 # openTFTP
 
-openTFTP est un implémentation du protocole TFTP (voir [RFC 1350](https://tools.ietf.org/html/rfc1350)).
+openTFTP est un implémentation du protocole TFTP (voir [RFC 2347](https://tools.ietf.org/html/rfc2347)).
 
 ## Compilation
 ```
