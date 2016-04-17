@@ -6,7 +6,7 @@ all: obj/tftp.o bin/server bin/client
 
 obj/tftp.o: src/tftp.c
 	mkdir -p obj
-	$(CC) $(CFLAGS) -c $^ -o $@ $(LDLIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 bin/server: src/server.c obj/tftp.o
 	mkdir -p bin
