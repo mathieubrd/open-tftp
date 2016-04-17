@@ -5,6 +5,7 @@
 #include <tftp.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
        
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -21,34 +22,56 @@ struct t_rrq {
 // Créé et attache la socket
 int initSocket(SocketUDP *sock, int bind);
 // Quite le programme proprement
-void quit(SocketUDP *sock, int code);
+void quit(int code);
 // Boucle principale
 void *process_RRQ(void *arg);
 // Attend une requête RRQ
-void handle_RRQ(SocketUDP *sock);
+void handle_RRQ(void);
+// Ferme le programme lors de l'arrivée d'un signal SIGINT
+void handle_sig(int sig);
+
+SocketUDP sock;
 
 int main(void) {
   // Initialise la socket
-  SocketUDP sock;
   if (initSocket(&sock, SOCK_BIND) != 0) {
-    quit(&sock, EXIT_FAILURE);
+    quit(EXIT_FAILURE);
+  }
+  
+  // Mise en place des signaux
+  struct sigaction sa;
+  sa.sa_handler = handle_sig;
+  if (sigfillset(&sa.sa_mask) != 0) {
+    perror("sigfillset");
+    quit(EXIT_FAILURE);
+  }
+  if (sigaction(SIGINT, &sa, NULL) != 0) {
+    perror("sigaction");
+    quit(EXIT_FAILURE);
   }
   
   // Attend une requête RRQ
   while (1) {
-    handle_RRQ(&sock);
+    handle_RRQ();
   }
   
-  quit(&sock, EXIT_SUCCESS);
+  quit(EXIT_SUCCESS);
 }
 
-void handle_RRQ(SocketUDP *sock) {
+void handle_sig(int sig) {
+  if (sig == SIGINT) {
+    printf("SIGINT\n");
+    quit(EXIT_SUCCESS);
+  }
+}
+
+void handle_RRQ(void) {
   // Attend une requête RRQ
   size_t rrq_len = 512;
   char rrq_buf[rrq_len];
   AdresseInternet addr_cli;
   
-  if (recvFromSocketUDP(sock, rrq_buf, rrq_len, &addr_cli, -1) == -1) {
+  if (recvFromSocketUDP(&sock, rrq_buf, rrq_len, &addr_cli, -1) == -1) {
     fprintf(stderr, "recvFromSocketUDP : impossible de recevoir le paquet.\n");
     return;
   }
@@ -58,13 +81,13 @@ void handle_RRQ(SocketUDP *sock) {
   memcpy(&opcode, rrq_buf, sizeof(uint16_t));
   
   if (opcode != RRQ) {
-    tftp_send_error(sock, &addr_cli, ILLEG, "Le serveur attend un paquet RRQ.");
+    tftp_send_error(&sock, &addr_cli, ILLEG, "Le serveur attend un paquet RRQ.");
     return;
   }
   
   // Lance le traitement du paquet RRQ dans un thread
   struct t_rrq rrq;
-  rrq.sock = sock;
+  rrq.sock = &sock;
   rrq.addr = &addr_cli;
   rrq.buffer = rrq_buf;
   pthread_t thread;
@@ -92,8 +115,8 @@ int initSocket(SocketUDP *sock, int bind) {
   return 0;
 }
 
-void quit(SocketUDP *sock, int code) {
-  if (closeSocketUDP(sock) == -1) {
+void quit(int code) {
+  if (closeSocketUDP(&sock) == -1) {
     fprintf(stderr, "closeSocketUDP : impossible de fermer la socket.\n");
     exit(EXIT_FAILURE);
   }
