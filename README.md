@@ -9,7 +9,7 @@ make
 Les exécutables sont placés dans le dossier `bin/`.
 
 ## Exécution
-Vous devez adapter votre variable d'environnement `LD_LIBRARY_PATH` pour que le programme puissent trouverles librairies dans le dosser `lib64`.
+Vous devez adapter votre variable d'environnement `LD_LIBRARY_PATH` pour que le programme puissent trouver les librairies dans le dosser `lib64`.
 ```
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./lib64
 ```
