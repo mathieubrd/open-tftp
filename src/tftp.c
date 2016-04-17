@@ -302,3 +302,25 @@ int tftp_send_last_ACK(SocketUDP *socket, const AdresseInternet *dst, const char
   
   return 0;
 }
+
+void tftp_print_error(char *buffer) {
+  // Vérifie les arguments
+  if (buffer == NULL) {
+    return;
+  }
+  
+  // Vérifie le type du paquet
+  uint16_t opcode;
+  memcpy(&opcode, &buffer[0], sizeof(uint16_t));
+  if (opcode != ERROR) {
+    return;
+  }
+  
+  // Affiche l'erreur sur la sortie standard
+  uint16_t errcode;
+  memcpy(&errcode, buffer + sizeof(uint16_t), sizeof(uint16_t));
+  char *errmsg = buffer + sizeof(uint16_t) * 2;
+  printf("Erreur reçue :\n");
+  printf("Code d'erreur : %d\n", errcode);
+  printf("Message : %s\n", errmsg);
+}

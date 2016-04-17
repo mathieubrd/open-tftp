@@ -35,5 +35,6 @@ int tftp_send_RRQ_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
 int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const char *packet, size_t packlen);
 int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const char *packet, size_t packlen, char *res, size_t *reslen);
 int tftp_send_last_ACK(SocketUDP *socket, const AdresseInternet *dst, const char *packet, size_t packlen);
+void tftp_print_error(char *buffer);
 
 #endif
