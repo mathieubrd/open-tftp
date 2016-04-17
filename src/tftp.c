@@ -144,8 +144,13 @@ int tftp_send_RRQ_wait_DATA_with_timeout(SocketUDP *socket, const AdresseInterne
   uint16_t opcode;
   memcpy(&opcode, res_buf, sizeof(uint16_t));
   if (opcode != DATA) {
-    fprintf(stderr, "tftp_send_RRQ_wait_DATA_with_timeout : le paquet reçu n'est pas de type DATA.\n");
-    return -1;
+    // Si le paquet reçu est de type ERROR, l'affiche
+    if (opcode == ERROR) {
+      tftp_print_error(res_buf);
+    } else {
+      fprintf(stderr, "tftp_send_RRQ_wait_DATA_with_timeout : le paquet reçu n'est pas de type DATA.\n");
+      return -1;
+    }
   }
   
   if (AdresseInternet_copy(connection, &con_buf) != 0) {
@@ -213,7 +218,15 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
     
     // Vérifie si c'est un paquet ACK
     memcpy(&opcode, buffer, sizeof(uint16_t));
-    if (opcode == ACK) {
+    if (opcode != ACK) {
+      // Si le paquet reçu est de type ERROR, l'affiche
+      if (opcode == ERROR) {
+	tftp_print_error(buffer);
+      } else {
+	fprintf(stderr, "tftp_send_DATA_wait_ACK: le paquet reçu n'est pas de type ACK.\n");
+	tftp_send_error(socket, dst, ILLEG, "Un paquet ACK été attendu.");
+      }
+    } else {
       // Vérifie si les numéros de bloc correspondent
       uint16_t blockDATA;
       memcpy(&blockDATA, packet + sizeof(uint16_t), sizeof(uint16_t));
@@ -225,9 +238,6 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
       } else {
 	fprintf(stderr, "tftp_send_DATA_wait_ACK: les numéros de bloc ne correspondent pas.\n");
       }
-    } else {
-      fprintf(stderr, "tftp_send_DATA_wait_ACK: le paquet reçu n'est pas de type ACK.\n");
-      tftp_send_error(socket, dst, ILLEG, "Un paquet ACK été attendu.");
     }
     
     tries++;
@@ -270,8 +280,13 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   // Vérifie si c'est un packet DATA
   memcpy(&opcode, buffer, sizeof(uint16_t));
   if (opcode != DATA) {
-    fprintf(stderr, "tftp_send_ACK_wait_DATA : le paquet reçu n'est pas de type DATA.\n");
-    return -1;
+    // Si le paquet reçu est de type ERROR, l'affiche
+    if (opcode == ERROR) {
+      tftp_print_error(buffer);
+    } else {
+      fprintf(stderr, "tftp_send_ACK_wait_DATA : le paquet reçu n'est pas de type DATA.\n");
+      return -1;
+    }
   }
   
   memcpy(res, buffer, length);
