@@ -1,4 +1,4 @@
-CFLAGS = -std=c11 -Wall -Werror -Wextra -pedantic -I./include
+CFLAGS = -std=c11 -Wall -Werror -Wextra -pedantic -D_XOPEN_SOURCE=600 -I./include
 LDFLAGS = -lpthread
 
 all: bin/server bin/client
