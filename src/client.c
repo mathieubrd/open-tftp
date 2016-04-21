@@ -5,6 +5,7 @@
 #include <tftp.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -15,6 +16,8 @@ int initSocket(void);
 void quit(int code);
 // Démarre le transfert
 void run(void);
+// Quitte le programme proprement à la réception d'un signal
+void handle_sig(int sig);
 
 SocketUDP sock;
 char *filename = NULL;
@@ -33,13 +36,36 @@ int main(int argc, char **argv) {
     quit(EXIT_FAILURE);
   }
   
+  // Récuperation nom de fichier
   filename = argv[1];
   destfile = argv[2];
+  
+  // Configuration des signaux
+  struct sigaction sa;
+  sa.sa_handler = handle_sig;
+  if (sigfillset(&sa.sa_mask) != 0) {
+    perror("sigfillset");
+    quit(EXIT_FAILURE);
+  }
+  if (sigaction(SIGINT, &sa, NULL) != 0) {
+    perror("sigaction");
+    quit(EXIT_FAILURE);
+  }
+  if (sigaction(SIGQUIT, &sa, NULL) != 0) {
+    perror("sigaction");
+    quit(EXIT_FAILURE);
+  }
   
   // Démarre le transfert
   run();
   
   return EXIT_SUCCESS;
+}
+
+void handle_sig(int sig) {
+  if (sig == SIGINT || sig == SIGQUIT) {
+    quit(EXIT_SUCCESS);
+  }
 }
 
 int initSocket(void) {
