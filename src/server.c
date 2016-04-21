@@ -63,7 +63,7 @@ int main(void) {
 }
 
 void handle_sig(int sig) {
-  if (sig == SIGINT || sig == SIGQUIT)
+  if (sig == SIGINT || sig == SIGQUIT) {
     quit(EXIT_SUCCESS);
   }
 }
