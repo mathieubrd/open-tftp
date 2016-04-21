@@ -27,7 +27,7 @@ void quit(int code);
 void *process_RRQ(void *arg);
 // Attend une requête RRQ
 void handle_RRQ(void);
-// Ferme le programme lors de l'arrivée d'un signal SIGINT
+// Ferme le programme lors de l'arrivée d'un signal
 void handle_sig(int sig);
 
 SocketUDP sock;
