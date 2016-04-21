@@ -88,8 +88,7 @@ int initSocket(void) {
 }
 
 void run(void) {
-    // Envoie un paquet RRQ et attend le premier paquet DATA
-  printf("%s\n", filename);
+  // Envoie un paquet RRQ et attend le premier paquet DATA
   AdresseInternet addrserv;
   size_t buffer_len = 512;
   char buffer[buffer_len];

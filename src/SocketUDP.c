@@ -74,14 +74,18 @@ ssize_t writeToSocketUDP(SocketUDP *sock, const AdresseInternet *adresse,
     return -1;
   }
   
-  struct sockaddr sockaddr;
-  if (AdresseInternet_to_sockaddr(adresse, &sockaddr) != 0) {
+  struct sockaddr_storage sockaddr;
+  if (AdresseInternet_to_sockaddr(adresse, (struct sockaddr *) &sockaddr) != 0) {
     return -1;
   }
   socklen_t sockaddr_len = sizeof(sockaddr);
   
-  ssize_t count = sendto(sock->sockfd, buffer, (size_t) length, 0, &sockaddr,
+  ssize_t count = sendto(sock->sockfd, buffer, (size_t) length, 0, (struct sockaddr *) &sockaddr,
     sockaddr_len);
+    
+  if (count == -1) {
+    perror("sendto");
+  }
   
   return count;
 }

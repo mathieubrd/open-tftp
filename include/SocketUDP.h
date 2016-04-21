@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <netinet/in.h>
+
 #define LOOPBACK 1
 
 typedef struct SocketUDP {
