@@ -31,7 +31,8 @@ void handle_RRQ(void);
 void handle_sig(int sig);
 
 int port;
-SocketUDP sock;
+SocketUDP *sock = NULL;
+SocketUDP *sock_cli = NULL;
 
 int main(int argc, char **argv) {
   // Vérifie les argument
@@ -44,7 +45,8 @@ int main(int argc, char **argv) {
   port = atoi(argv[1]);
     
   // Initialise la socket
-  if (initSocket(&sock, SOCK_BIND) != 0) {
+  sock = malloc(sizeof(SocketUDP));
+  if (initSocket(sock, SOCK_BIND) != 0) {
     quit(EXIT_FAILURE);
   }
   
@@ -84,7 +86,7 @@ void handle_RRQ(void) {
   char rrq_buf[rrq_len];
   AdresseInternet addr_cli;
   
-  if (recvFromSocketUDP(&sock, rrq_buf, rrq_len, &addr_cli, -1) == -1) {
+  if (recvFromSocketUDP(sock, rrq_buf, rrq_len, &addr_cli, -1) == -1) {
     fprintf(stderr, "recvFromSocketUDP : impossible de recevoir le paquet.\n");
     return;
   }
@@ -94,13 +96,13 @@ void handle_RRQ(void) {
   memcpy(&opcode, rrq_buf, sizeof(uint16_t));
   
   if (opcode != RRQ) {
-    tftp_send_error(&sock, &addr_cli, ILLEG, "Le serveur attend un paquet RRQ.");
+    tftp_send_error(sock, &addr_cli, ILLEG, "Le serveur attend un paquet RRQ.");
     return;
   }
   
   // Lance le traitement du paquet RRQ dans un thread
   struct t_rrq rrq;
-  rrq.sock = &sock;
+  rrq.sock = sock;
   rrq.addr = &addr_cli;
   rrq.buffer = rrq_buf;
   pthread_t thread;
@@ -129,9 +131,20 @@ int initSocket(SocketUDP *sock, int bind) {
 }
 
 void quit(int code) {
-  if (closeSocketUDP(&sock) == -1) {
-    fprintf(stderr, "closeSocketUDP : impossible de fermer la socket.\n");
-    exit(EXIT_FAILURE);
+  if (sock != NULL) {
+      if (closeSocketUDP(sock) == -1) {
+        fprintf(stderr, "closeSocketUDP : impossible de fermer la socket du serveur.\n");
+        exit(EXIT_FAILURE);
+      }
+      free(sock);
+  }
+  
+  if (sock_cli != NULL) {
+    if (closeSocketUDP(sock) == -1) {
+      fprintf(stderr, "closeSocketUDP : impossible de fermer la socket du client.\n");
+      exit(EXIT_FAILURE);
+    }
+    free(sock_cli);
   }
   
   exit(code);
@@ -158,8 +171,8 @@ void *process_RRQ(void *arg) {
     
     if (fd != -1) {
       // Initialise une nouvelle socket dédiée au client
-      SocketUDP sock_cli;
-      if (initSocket(&sock_cli, SOCK_NO_BIND) != 0) {
+      sock_cli = malloc(sizeof(SocketUDP));
+      if (initSocket(sock_cli, SOCK_NO_BIND) != 0) {
         tftp_send_error(sock, addr_cli, UNDEF, "Une erreur de connexion est survenue.");
         break;
       }
@@ -175,13 +188,13 @@ void *process_RRQ(void *arg) {
         char data_buf[data_len];
         
         if (tftp_make_data(data_buf, &data_len, block, fcontent_buf, count) != 0) {
-          tftp_send_error(&sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
+          tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
           break;
         }
         
         // Envoie le paquet DATA et attend le paquet ACK
-        if (tftp_send_DATA_wait_ACK(&sock_cli, addr_cli, data_buf, data_len) != 0) {
-          tftp_send_error(&sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
+        if (tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len) != 0) {
+          tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
           break;
         }
         
@@ -189,7 +202,7 @@ void *process_RRQ(void *arg) {
       }
       
       // Ferme la socket dédiée au client
-      if (closeSocketUDP(&sock_cli) != 0) {
+      if (closeSocketUDP(sock_cli) != 0) {
         fprintf(stderr, "closeSocketUDP : impossible de fermer la socket.\n");
       }
     }
