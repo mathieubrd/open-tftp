@@ -49,6 +49,10 @@ int main(void) {
     perror("sigaction");
     quit(EXIT_FAILURE);
   }
+  if (sigaction(SIGQUIT, &sa, NULL) != 0) {
+    perror("sigaction");
+    quit(EXIT_FAILURE);
+  }
   
   // Attend une requête RRQ
   while (1) {
@@ -59,8 +63,7 @@ int main(void) {
 }
 
 void handle_sig(int sig) {
-  if (sig == SIGINT) {
-    printf("SIGINT\n");
+  if (sig == SIGINT || sig == SIGQUIT)
     quit(EXIT_SUCCESS);
   }
 }
