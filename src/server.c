@@ -30,9 +30,19 @@ void handle_RRQ(void);
 // Ferme le programme lors de l'arrivée d'un signal
 void handle_sig(int sig);
 
+int port;
 SocketUDP sock;
 
-int main(void) {
+int main(int argc, char **argv) {
+  // Vérifie les argument
+  if (argc != 2) {
+    fprintf(stderr, "%s : port\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+  
+  // Récuperation des arguments
+  port = atoi(argv[1]);
+    
   // Initialise la socket
   if (initSocket(&sock, SOCK_BIND) != 0) {
     quit(EXIT_FAILURE);
@@ -109,7 +119,7 @@ int initSocket(SocketUDP *sock, int bind) {
   
   // Attache la socket
   if (bind == SOCK_BIND) {
-    if (attacherSocketUDP(sock, NULL, 25565, 0) != 0) {
+    if (attacherSocketUDP(sock, NULL, port, 0) != 0) {
       fprintf(stderr, "attacherSocketUDP : impossible d'attacher la socket.\n");
       return -1;
     }
