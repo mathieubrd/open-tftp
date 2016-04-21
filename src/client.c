@@ -9,9 +9,26 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+// Initialise la socket
+int initSocket(void);
+// Quitte le programme proprement
 void quit(int code);
 
 SocketUDP sock;
+
+int initSocket(void) {
+  // Créé la socket
+  if (initSocketUDP(&sock) != 0) {
+    fprintf(stderr, "initSocketUDP : impossible de créer la socket.\n");
+    return -1;
+  }
+  AdresseInternet *dst = AdresseInternet_new("localhost", 25565);
+  if (dst == NULL) {
+    fprintf(stderr, "AdresseInternet_new : impossible de créer une AdresseInternet.\n");
+    return -1;
+  }
+    
+}
 
 int main(int argc, char **argv) {
   // Vérifie les arguments
@@ -20,14 +37,8 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
   
-  // Créé la socket
-  if (initSocketUDP(&sock) != 0) {
-    fprintf(stderr, "initSocketUDP : impossible de créer la socket.\n");
-    quit(EXIT_FAILURE);
-  }
-  AdresseInternet *dst = AdresseInternet_new("localhost", 25565);
-  if (dst == NULL) {
-    fprintf(stderr, "AdresseInternet_new : impossible de créer une AdresseInternet.\n");
+  // Initialise la socket
+  if (initSocket() != 0) {
     quit(EXIT_FAILURE);
   }
   
