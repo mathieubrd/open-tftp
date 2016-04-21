@@ -13,22 +13,13 @@
 int initSocket(void);
 // Quitte le programme proprement
 void quit(int code);
+// Démarre le transfert
+void run(void);
 
 SocketUDP sock;
-
-int initSocket(void) {
-  // Créé la socket
-  if (initSocketUDP(&sock) != 0) {
-    fprintf(stderr, "initSocketUDP : impossible de créer la socket.\n");
-    return -1;
-  }
-  AdresseInternet *dst = AdresseInternet_new("localhost", 25565);
-  if (dst == NULL) {
-    fprintf(stderr, "AdresseInternet_new : impossible de créer une AdresseInternet.\n");
-    return -1;
-  }
-    
-}
+char *filename = NULL;
+char *destfile = NULL;
+AdresseInternet *dst = NULL;
 
 int main(int argc, char **argv) {
   // Vérifie les arguments
@@ -42,8 +33,32 @@ int main(int argc, char **argv) {
     quit(EXIT_FAILURE);
   }
   
-  // Envoie un paquet RRQ et attend le premier paquet DATA
-  char *filename = argv[1];
+  filename = argv[1];
+  destfile = argv[2];
+  
+  // Démarre le transfert
+  run();
+  
+  return EXIT_SUCCESS;
+}
+
+int initSocket(void) {
+  // Créé la socket
+  if (initSocketUDP(&sock) != 0) {
+    fprintf(stderr, "initSocketUDP : impossible de créer la socket.\n");
+    return -1;
+  }
+  dst = AdresseInternet_new("localhost", 25565);
+  if (dst == NULL) {
+    fprintf(stderr, "AdresseInternet_new : impossible de créer une AdresseInternet.\n");
+    return -1;
+  }
+   
+  return 0;
+}
+
+void run(void) {
+    // Envoie un paquet RRQ et attend le premier paquet DATA
   printf("%s\n", filename);
   AdresseInternet addrserv;
   size_t buffer_len = 512;
@@ -59,7 +74,6 @@ int main(int argc, char **argv) {
   printf("block reçu : %d\n", block);
   
   // Ouvre le fichier
-  char *destfile = argv[2];
   int fd = open(destfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
   if (fd == -1) {
     perror("open");
@@ -109,8 +123,6 @@ int main(int argc, char **argv) {
     fprintf(stderr, "tftp_send_last : erreur\n");
     quit(EXIT_FAILURE);
   }
-  
-  return EXIT_SUCCESS;
 }
 
 void quit(int code) {
