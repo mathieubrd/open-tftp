@@ -24,4 +24,4 @@ bin/client <adresse> <port> <fichier> <destination>
 `<fichier>` correspond au nom du fichier stocké sur le serveur.
 `<destination>` correspond au chemin où sera écrit le fichier téléchargé.
 
-**Exemple :** `bin/client image.jpg ~/Images/photo.jpg`
+**Exemple :** `bin/client 192.168.1.54 25565 image.jpg ~/Images/photo.jpg`
