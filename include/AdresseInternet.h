@@ -2,7 +2,6 @@
 #define ADRESSEINTERNET_H_
 
 #include <stdint.h>
-#include <netinet/ip.h> // Pour in_port_t
 
 #include "AdresseInternetType.h"
 
