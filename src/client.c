@@ -20,25 +20,29 @@ void run(void);
 void handle_sig(int sig);
 
 SocketUDP sock;
+char *ip = NULL;
+int port;
 char *filename = NULL;
 char *destfile = NULL;
 AdresseInternet *dst = NULL;
 
 int main(int argc, char **argv) {
   // Vérifie les arguments
-  if (argc != 3) {
-    fprintf(stderr, "%s : fichier destination\n", argv[0]);
+  if (argc != 5) {
+    fprintf(stderr, "%s : ip port fichier destination\n", argv[0]);
     exit(EXIT_FAILURE);
   }
+  
+  // Récuperation arguments
+  ip = argv[1];
+  port = atoi(argv[2]);
+  filename = argv[3];
+  destfile = argv[4];
   
   // Initialise la socket
   if (initSocket() != 0) {
     quit(EXIT_FAILURE);
   }
-  
-  // Récuperation nom de fichier
-  filename = argv[1];
-  destfile = argv[2];
   
   // Configuration des signaux
   struct sigaction sa;
@@ -74,7 +78,7 @@ int initSocket(void) {
     fprintf(stderr, "initSocketUDP : impossible de créer la socket.\n");
     return -1;
   }
-  dst = AdresseInternet_new("localhost", 25565);
+  dst = AdresseInternet_new(ip, port);
   if (dst == NULL) {
     fprintf(stderr, "AdresseInternet_new : impossible de créer une AdresseInternet.\n");
     return -1;
