@@ -26,13 +26,19 @@ int attacherSocketUDP(SocketUDP *sock, const char *adresse, uint16_t port,
     }
   }
   
-  struct sockaddr sockaddr;
-  if (AdresseInternet_to_sockaddr(sock->addr, &sockaddr) != 0) {
+  struct sockaddr_storage ss;
+  if (AdresseInternet_to_sockaddr(sock->addr, (struct sockaddr *) &ss) != 0) {
     return -1;
   }
-  socklen_t sockaddr_len = sizeof(sockaddr);
   
-  if (bind(sock->sockfd, &sockaddr, sockaddr_len) != 0) {
+  socklen_t ss_len;
+  if (ss.ss_family == AF_INET6) {
+    ss_len = sizeof(struct sockaddr_in6);
+  } else {
+    ss_len = sizeof(struct sockaddr);
+  }
+  
+  if (bind(sock->sockfd, (struct sockaddr *) &ss, ss_len) != 0) {
     perror("bind");
     return -1;
   }
@@ -74,14 +80,20 @@ ssize_t writeToSocketUDP(SocketUDP *sock, const AdresseInternet *adresse,
     return -1;
   }
   
-  struct sockaddr_storage sockaddr;
-  if (AdresseInternet_to_sockaddr(adresse, (struct sockaddr *) &sockaddr) != 0) {
+  struct sockaddr_storage ss;
+  if (AdresseInternet_to_sockaddr(adresse, (struct sockaddr *) &ss) != 0) {
     return -1;
   }
-  socklen_t sockaddr_len = sizeof(sockaddr);
   
-  ssize_t count = sendto(sock->sockfd, buffer, (size_t) length, 0, (struct sockaddr *) &sockaddr,
-    sockaddr_len);
+  socklen_t ss_len;
+  if (ss.ss_family == AF_INET6) {
+    ss_len = sizeof(struct sockaddr_in6);
+  } else {
+    ss_len = sizeof(struct sockaddr);
+  }
+  
+  ssize_t count = sendto(sock->sockfd, buffer, (size_t) length, 0, (struct sockaddr *) &ss,
+    ss_len);
     
   if (count == -1) {
     perror("sendto");
@@ -97,9 +109,9 @@ ssize_t recvFromSocketUDP(SocketUDP *sock, char *buffer, int length,
     return -1;
   }
   
-  struct sockaddr sockaddr;
-  memset(&sockaddr, 0, sizeof(sockaddr));
-  socklen_t sockaddr_len = sizeof(sockaddr);
+  struct sockaddr_storage ss;
+  memset(&ss, 0, sizeof(ss));
+  socklen_t ss_len = sizeof(ss);
   
   struct sigaction act;
   act.sa_handler = handleAlarm;
@@ -115,11 +127,10 @@ ssize_t recvFromSocketUDP(SocketUDP *sock, char *buffer, int length,
   
   alarm(timeout);
   
-  ssize_t count = recvfrom(sock->sockfd, buffer, length, 0, &sockaddr,
-    &sockaddr_len);
+  ssize_t count = recvfrom(sock->sockfd, buffer, length, 0, (struct sockaddr *) &ss, &ss_len);
     
   if (adresse != NULL) {
-    sockaddr_to_AdresseInternet(&sockaddr, adresse);
+    sockaddr_to_AdresseInternet((struct sockaddr *) &ss, adresse);
   }
   
   return count;
