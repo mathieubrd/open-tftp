@@ -16,7 +16,7 @@
 struct t_rrq {
   SocketUDP *sock;
   AdresseInternet *addr;
-  char *buffer;
+  char *filename;
 };
 
 // Créé et attache la socket
@@ -94,17 +94,22 @@ void handle_RRQ(void) {
   // Si le paquet n'est pas de type RRQ, envoie une erreur
   uint16_t opcode;
   memcpy(&opcode, rrq_buf, sizeof(uint16_t));
+  opcode = ntohs(opcode);
   
   if (opcode != RRQ) {
     tftp_send_error(sock, &addr_cli, ILLEG, "Le serveur attend un paquet RRQ.");
     return;
   }
   
+  printf("RRQ received\n");
+  printf("Filename: %s\n", rrq_buf + sizeof(uint16_t));
+  
   // Lance le traitement du paquet RRQ dans un thread
   struct t_rrq rrq;
   rrq.sock = sock;
   rrq.addr = &addr_cli;
-  rrq.buffer = rrq_buf;
+  rrq.filename = malloc(sizeof(char) * strlen(rrq_buf + sizeof(uint16_t)) + 1);
+  strncpy(rrq.filename, rrq_buf + sizeof(uint16_t), strlen(rrq_buf + sizeof(uint16_t)) + 1);
   pthread_t thread;
   if (pthread_create(&thread, NULL, process_RRQ, &rrq) != 0) {
     perror("pthread_create");
@@ -154,10 +159,9 @@ void *process_RRQ(void *arg) {
   struct t_rrq *rrq = (struct t_rrq *) arg;
   SocketUDP *sock = rrq->sock;
   AdresseInternet *addr_cli = rrq->addr;
-  char *rrq_buf = rrq->buffer;
+  char *filename = rrq->filename;
   
   // Ouvre le fichier demandé, envoie une erreur si l'ouvertue échoue
-  char *filename = &rrq_buf[sizeof(uint16_t)];
   int fd = open(filename, O_RDONLY);
 
   if (fd == -1) {
@@ -182,6 +186,7 @@ void *process_RRQ(void *arg) {
     uint16_t block = 1;
     
     while ((count = read(fd, fcontent_buf, sizeof(fcontent_buf))) > 0) {
+      printf("Make DATA\n");
       // Construit le paquet DATA
       size_t data_len = 512;
       char data_buf[data_len];
@@ -191,11 +196,15 @@ void *process_RRQ(void *arg) {
         break;
       }
       
+      printf("Envoie DATA\n");
+      
       // Envoie le paquet DATA et attend le paquet ACK
       if (tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len) != 0) {
         tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
         break;
       }
+      
+      printf("Paquet DATA envoyé\n");
       
       block++;
     }

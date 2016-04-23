@@ -99,6 +99,7 @@ void run(void) {
 
   uint16_t block;
   memcpy(&block, buffer + sizeof(uint16_t), sizeof(uint16_t));
+  block = ntohs(block);
   
   printf("block reçu : %d\n", block);
   
@@ -128,6 +129,7 @@ void run(void) {
       quit(EXIT_FAILURE);
     }
     memcpy(&block, data + sizeof(uint16_t), sizeof(uint16_t));
+    block = ntohs(block);
     
     printf("block reçu : %d\n", block);
     
@@ -149,7 +151,7 @@ void run(void) {
     quit(EXIT_FAILURE);
   }
   if (tftp_send_last_ACK(&sock, &addrserv, buffer, buffer_len) != 0) {
-    fprintf(stderr, "tftp_send_last : erreur\n");
+    fprintf(stderr, "tftp_send_last_ACK : erreur\n");
     quit(EXIT_FAILURE);
   }
 }

@@ -9,9 +9,10 @@ int tftp_make_ack(char *buffer, size_t *length, uint16_t block) {
   // Construit le paquet
   memset(buffer, 0, *length);
   *length = 0;
-  uint16_t opcode = ACK;
+  uint16_t opcode = htons(ACK);
   memcpy(buffer, &opcode, sizeof(uint16_t));
   *length += sizeof(uint16_t);
+  block = htons(block);
   memcpy(buffer + *length, &block, sizeof(uint16_t));
   *length += sizeof(uint16_t);
   
@@ -27,7 +28,7 @@ int tftp_make_rrq(char *buffer, size_t *length, const char *file) {
   // Construit le paquet
   memset(buffer, 0, *length);
   *length = 0;
-  uint16_t opcode = RRQ;
+  uint16_t opcode = htons(RRQ);
   memcpy(buffer, &opcode, sizeof(uint16_t));
   *length += sizeof(uint16_t);
   memcpy(buffer + *length, file, strlen(file) + 1);
@@ -47,9 +48,10 @@ int tftp_make_data(char *buffer, size_t *length, uint16_t block, const char *dat
   // Construit le paquet
   memset(buffer, 0, *length);
   *length = 0;
-  uint16_t opcode = DATA;
+  uint16_t opcode = htons(DATA);
   memcpy(buffer, &opcode, sizeof(uint16_t));
   *length += sizeof(uint16_t);
+  block = htons(block);
   memcpy(buffer + *length, &block, sizeof(uint16_t));
   *length += sizeof(uint16_t);
   memcpy(buffer + *length, data, n);
@@ -58,24 +60,25 @@ int tftp_make_data(char *buffer, size_t *length, uint16_t block, const char *dat
   return 0;
 }
 
-int tftp_make_error(char *buffer, size_t *length, uint16_t errorcode, const char *message) {  
+int tftp_make_error(char *buffer, size_t *length, uint16_t errcode, const char *message) {  
   // Vérifie les arguments
   if (buffer == NULL || length == NULL || *length > 512 || message == NULL) {
     return -1;
   }
   
   // Vérifie le code d'erreur
-  if (errorcode != UNDEF && errorcode != FILNF && errorcode != ILLEG && errorcode != UNKNW) {
+  if (errcode != UNDEF && errcode != FILNF && errcode != ILLEG && errcode != UNKNW) {
     return -1;
   }
   
   // Construit le paquet
   memset(buffer, 0, *length);
   *length = 0;
-  uint16_t opcode = ERROR;
+  uint16_t opcode = htons(ERROR);
   memcpy(buffer, &opcode, sizeof(uint16_t));
   *length += sizeof(uint16_t);
-  memcpy(buffer + *length, &errorcode, sizeof(uint16_t));
+  errcode = htons(errcode);
+  memcpy(buffer + *length, &errcode, sizeof(uint16_t));
   *length += sizeof(uint16_t);
   memcpy(buffer + *length, message, strlen(message) + 1);
   *length += strlen(message) + 1;
@@ -133,6 +136,7 @@ int tftp_send_RRQ_wait_DATA_with_timeout(SocketUDP *socket, const AdresseInterne
   // Vérifie que le paquet reçu est de type DATA
   uint16_t opcode;
   memcpy(&opcode, res_buf, sizeof(uint16_t));
+  opcode = ntohs(opcode);
   if (opcode != DATA) {
     return -1;
   }
@@ -176,7 +180,7 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
   // Vérifie que le paquet donné et de type DATA
   uint16_t opcode;
   memcpy(&opcode, packet, sizeof(uint16_t));
-  if (opcode != DATA) {
+  if (opcode != htons(DATA)) {
     return -1;
   }
   
@@ -197,14 +201,17 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
     
     // Vérifie si c'est un paquet ACK
     memcpy(&opcode, buffer, sizeof(uint16_t));
+    opcode = ntohs(opcode);
     if (opcode != ACK) {
       tftp_send_error(socket, dst, ILLEG, "Un paquet ACK été attendu.");
     } else {
       // Vérifie si les numéros de bloc correspondent
       uint16_t blockDATA;
       memcpy(&blockDATA, packet + sizeof(uint16_t), sizeof(uint16_t));
+      blockDATA = ntohs(blockDATA);
       uint16_t blockACK;
       memcpy(&blockACK, buffer + sizeof(uint16_t), sizeof(uint16_t));
+      blockACK = ntohs(blockACK);
       
       if (blockDATA == blockACK) {
 	    return 0;
@@ -226,7 +233,7 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   // Vérifie si le paquet donné est de type ACK
   uint16_t opcode;
   memcpy(&opcode, packet, sizeof(uint16_t));
-  if (opcode != ACK) {
+  if (opcode != htons(ACK)) {
     return -1;
   }
   
@@ -245,7 +252,7 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   
   // Vérifie si c'est un packet DATA
   memcpy(&opcode, buffer, sizeof(uint16_t));
-  if (opcode != DATA) {
+  if (opcode != htons(DATA)) {
     return -1;
   }
   
@@ -264,7 +271,7 @@ int tftp_send_last_ACK(SocketUDP *socket, const AdresseInternet *dst, const char
   // Vérifie que le paquet donné est de type ACK
   uint16_t opcode;
   memcpy(&opcode, packet, sizeof(uint16_t));
-  if (opcode != ACK) {
+  if (opcode != htons(ACK)) {
     return -1;
   }
   
