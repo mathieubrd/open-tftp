@@ -219,13 +219,7 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
     // Vérifie si c'est un paquet ACK
     memcpy(&opcode, buffer, sizeof(uint16_t));
     if (opcode != ACK) {
-      // Si le paquet reçu est de type ERROR, l'affiche
-      if (opcode == ERROR) {
-	tftp_print_error(buffer);
-      } else {
-	fprintf(stderr, "tftp_send_DATA_wait_ACK: le paquet reçu n'est pas de type ACK.\n");
-	tftp_send_error(socket, dst, ILLEG, "Un paquet ACK été attendu.");
-      }
+      tftp_send_error(socket, dst, ILLEG, "Un paquet ACK été attendu.");
     } else {
       // Vérifie si les numéros de bloc correspondent
       uint16_t blockDATA;
@@ -273,20 +267,13 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   char buffer[length];
   AdresseInternet from;
   if ((length = recvFromSocketUDP(socket, buffer, length, &from, TIMEOUT)) == -1) {
-    fprintf(stderr, "tftp_send_ACK_wait_DATA : impossible de recevoir le paquet.\n");
     return -1;
   }
   
   // Vérifie si c'est un packet DATA
   memcpy(&opcode, buffer, sizeof(uint16_t));
   if (opcode != DATA) {
-    // Si le paquet reçu est de type ERROR, l'affiche
-    if (opcode == ERROR) {
-      tftp_print_error(buffer);
-    } else {
-      fprintf(stderr, "tftp_send_ACK_wait_DATA : le paquet reçu n'est pas de type DATA.\n");
-      return -1;
-    }
+    return -1;
   }
   
   memcpy(res, buffer, length);
@@ -305,37 +292,13 @@ int tftp_send_last_ACK(SocketUDP *socket, const AdresseInternet *dst, const char
   uint16_t opcode;
   memcpy(&opcode, packet, sizeof(uint16_t));
   if (opcode != ACK) {
-    fprintf(stderr, "tftp_send_last_ACK: le paquet donné n'est pas de type ACK.\n");
     return -1;
   }
   
   // Envoie le paquet ACK
   if (writeToSocketUDP(socket, dst, packet, packlen) == -1) {
-    fprintf(stderr, "tftp_send_last_ACK: impossible de recevoir le paquet.\n");
     return -1;
   }
   
   return 0;
-}
-
-void tftp_print_error(char *buffer) {
-  // Vérifie les arguments
-  if (buffer == NULL) {
-    return;
-  }
-  
-  // Vérifie le type du paquet
-  uint16_t opcode;
-  memcpy(&opcode, &buffer[0], sizeof(uint16_t));
-  if (opcode != ERROR) {
-    return;
-  }
-  
-  // Affiche l'erreur sur la sortie standard
-  uint16_t errcode;
-  memcpy(&errcode, buffer + sizeof(uint16_t), sizeof(uint16_t));
-  char *errmsg = buffer + sizeof(uint16_t) * 2;
-  printf("Erreur reçue :\n");
-  printf("Code d'erreur : %d\n", errcode);
-  printf("Message : %s\n", errmsg);
 }
