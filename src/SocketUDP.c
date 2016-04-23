@@ -106,6 +106,7 @@ ssize_t recvFromSocketUDP(SocketUDP *sock, char *buffer, int length,
   AdresseInternet *adresse, int timeout) {
   
   if (sock == NULL || buffer == NULL) {
+    fprintf(stderr, "recvFromSocketUDP: invalid argument.\n");
     return -1;
   }
   
@@ -113,21 +114,29 @@ ssize_t recvFromSocketUDP(SocketUDP *sock, char *buffer, int length,
   memset(&ss, 0, sizeof(ss));
   socklen_t ss_len = sizeof(ss);
   
-  struct sigaction act;
-  act.sa_handler = handleAlarm;
-  act.sa_flags = 0;
-  
-  if (sigemptyset(&act.sa_mask) != 0) {
-    return -1;
+  if (timeout > 0) {
+      struct sigaction act;
+      act.sa_handler = handleAlarm;
+      act.sa_flags = 0;
+      
+      if (sigemptyset(&act.sa_mask) != 0) {
+        fprintf(stderr, "recvFromSocketUDP: sigemptyset error.\n");
+        return -1;
+      }
+      
+      if (sigaction(SIGALRM, &act, NULL) != 0) {
+        fprintf(stderr, "recvFromSocketUDP: sigaction error.\n");
+        return -1;
+      }
+      
+      alarm(timeout);
   }
-  
-  if (sigaction(SIGALRM, &act, NULL) != 0) {
-    return -1;
-  }
-  
-  alarm(timeout);
   
   ssize_t count = recvfrom(sock->sockfd, buffer, length, 0, (struct sockaddr *) &ss, &ss_len);
+  
+  if (timeout > 0) {
+    alarm(0);
+  }
     
   if (adresse != NULL) {
     sockaddr_to_AdresseInternet((struct sockaddr *) &ss, adresse);
@@ -146,6 +155,7 @@ int closeSocketUDP(SocketUDP *sock) {
 
 void handleAlarm(int sig) {
   if (sig == SIGALRM) {
+    printf("SIGALRM\n");
     // Timeout, nothing to do
   }
 }

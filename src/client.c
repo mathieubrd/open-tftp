@@ -92,8 +92,8 @@ void run(void) {
   AdresseInternet addrserv;
   size_t buffer_len = 512;
   char buffer[buffer_len];
-  if (tftp_send_RRQ_wait_DATA_with_timeout(&sock, dst, filename, &addrserv, buffer, &buffer_len) != 0) {
-    fprintf(stderr, "tftp_send_RRQ_wait_DATA_with_timeout: erreur\n");
+  if (tftp_send_RRQ_wait_DATA(&sock, dst, filename, &addrserv, buffer, &buffer_len) != 0) {
+    fprintf(stderr, "tftp_send_RRQ_wait_DATA: erreur\n");
     quit(EXIT_FAILURE);
   }
 
