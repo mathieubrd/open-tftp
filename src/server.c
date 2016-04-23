@@ -156,57 +156,57 @@ void *process_RRQ(void *arg) {
   AdresseInternet *addr_cli = rrq->addr;
   char *rrq_buf = rrq->buffer;
   
-  while (1) {
-    // Ouvre le fichier demandé, envoie une erreur si l'ouvertue échoue
-    char *filename = &rrq_buf[sizeof(uint16_t)];
-    int fd = open(filename, O_RDONLY);
-    
-    if (fd == -1) {
-      perror("fd");
-      if (errno == EACCES) {
-	tftp_send_error(sock, addr_cli, FILNF, "Le fichier demandé est introuvable.");
-      }
-      break;
+  // Ouvre le fichier demandé, envoie une erreur si l'ouvertue échoue
+  char *filename = &rrq_buf[sizeof(uint16_t)];
+  int fd = open(filename, O_RDONLY);
+
+  if (fd == -1) {
+    perror("fd");
+    if (errno == EACCES) {
+      tftp_send_error(sock, addr_cli, FILNF, "Le fichier demandé est introuvable.");
+    }
+    return NULL;
+  }
+
+  if (fd != -1) {
+    // Initialise une nouvelle socket dédiée au client
+    sock_cli = malloc(sizeof(SocketUDP));
+    if (initSocket(sock_cli, SOCK_NO_BIND) != 0) {
+      tftp_send_error(sock, addr_cli, UNDEF, "Une erreur de connexion est survenue.");
+      return NULL;
     }
     
-    if (fd != -1) {
-      // Initialise une nouvelle socket dédiée au client
-      sock_cli = malloc(sizeof(SocketUDP));
-      if (initSocket(sock_cli, SOCK_NO_BIND) != 0) {
-        tftp_send_error(sock, addr_cli, UNDEF, "Une erreur de connexion est survenue.");
+    // Lit le fichier
+    char fcontent_buf[508];
+    size_t count;
+    uint16_t block = 1;
+    
+    while ((count = read(fd, fcontent_buf, sizeof(fcontent_buf))) > 0) {
+      // Construit le paquet DATA
+      size_t data_len = 512;
+      char data_buf[data_len];
+      
+      if (tftp_make_data(data_buf, &data_len, block, fcontent_buf, count) != 0) {
+        tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
         break;
       }
       
-      // Lit le fichier
-      char fcontent_buf[508];
-      size_t count;
-      uint16_t block = 1;
-      
-      while ((count = read(fd, fcontent_buf, sizeof(fcontent_buf))) > 0) {
-        // Construit le paquet DATA
-        size_t data_len = 512;
-        char data_buf[data_len];
-        
-        if (tftp_make_data(data_buf, &data_len, block, fcontent_buf, count) != 0) {
-          tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
-          break;
-        }
-        
-        // Envoie le paquet DATA et attend le paquet ACK
-        if (tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len) != 0) {
-          tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
-          break;
-        }
-        
-        block++;
+      // Envoie le paquet DATA et attend le paquet ACK
+      if (tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len) != 0) {
+        tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
+        break;
       }
       
-      // Ferme la socket dédiée au client
-      if (closeSocketUDP(sock_cli) != 0) {
-        fprintf(stderr, "closeSocketUDP : impossible de fermer la socket.\n");
-      }
+      block++;
     }
     
+    // Ferme la socket dédiée au client
+    if (closeSocketUDP(sock_cli) != 0) {
+      fprintf(stderr, "closeSocketUDP : impossible de fermer la socket.\n");
+    }
+    
+    sock_cli = NULL;
+          
     // Ferme le fichier
     if (close(fd) != 0) {
       perror("close");
