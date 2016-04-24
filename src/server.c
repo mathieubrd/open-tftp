@@ -101,9 +101,6 @@ void handle_RRQ(void) {
     return;
   }
   
-  printf("RRQ received\n");
-  printf("Filename: %s\n", rrq_buf + sizeof(uint16_t));
-  
   // Lance le traitement du paquet RRQ dans un thread
   struct t_rrq rrq;
   rrq.sock = sock;
@@ -186,25 +183,23 @@ void *process_RRQ(void *arg) {
     uint16_t block = 1;
     
     while ((count = read(fd, fcontent_buf, sizeof(fcontent_buf))) > 0) {
-      printf("Make DATA\n");
       // Construit le paquet DATA
       size_t data_len = 512;
       char data_buf[data_len];
+      ssize_t errcode;
       
-      if (tftp_make_data(data_buf, &data_len, block, fcontent_buf, count) != 0) {
+      if ((errcode = tftp_make_data(data_buf, &data_len, block, fcontent_buf, count)) != 0){
+        fprintf(stderr, "tftp_make_data : %s\n", tftp_strerror(errcode));
         tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
         break;
       }
-      
-      printf("Envoie DATA\n");
       
       // Envoie le paquet DATA et attend le paquet ACK
-      if (tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len) != 0) {
+      if ((errcode = tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len)) != 0) {
+        fprintf(stderr, "tftp_send_DATA_wait_ACK : %s\n", tftp_strerror(errcode));
         tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
         break;
       }
-      
-      printf("Paquet DATA envoyé\n");
       
       block++;
     }

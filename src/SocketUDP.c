@@ -155,6 +155,7 @@ int closeSocketUDP(SocketUDP *sock) {
 
 void handleAlarm(int sig) {
   if (sig == SIGALRM) {
+    printf("SIGALRM\n");
     // Timeout, nothing to do
   }
 }

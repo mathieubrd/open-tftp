@@ -92,8 +92,10 @@ void run(void) {
   AdresseInternet addrserv;
   size_t buffer_len = 512;
   char buffer[buffer_len];
-  if (tftp_send_RRQ_wait_DATA(&sock, dst, filename, &addrserv, buffer, &buffer_len) != 0) {
-    fprintf(stderr, "tftp_send_RRQ_wait_DATA: erreur\n");
+  ssize_t errcode;
+  
+  if ((errcode = tftp_send_RRQ_wait_DATA(&sock, dst, filename, &addrserv, buffer, &buffer_len)) != 0) {
+    fprintf(stderr, "tftp_send_RRQ_wait_DATA: %s\n", tftp_strerror(errcode));
     quit(EXIT_FAILURE);
   }
 
@@ -118,14 +120,16 @@ void run(void) {
   while (1) {
     // Envoie le premier paquet ACK et attend le paquet DATA
     buffer_len = 512;
-    if (tftp_make_ack(buffer, &buffer_len, block) != 0) {
-      fprintf(stderr, "tftp_make_ack : erreur\n");
+    if ((errcode = tftp_make_ack(buffer, &buffer_len, block)) != 0) {
+      fprintf(stderr, "tftp_make_ack : %s\n", tftp_strerror(errcode));
       quit(EXIT_FAILURE);
     }
+    
     size_t data_len = 512;
     char data[data_len];
-    if (tftp_send_ACK_wait_DATA(&sock, &addrserv, buffer, buffer_len, data, &data_len) != 0) {
-      fprintf(stderr, "tftp_send_ACK_wait_DATA : erreur\n");
+    
+    if ((errcode = tftp_send_ACK_wait_DATA(&sock, &addrserv, buffer, buffer_len, data, &data_len)) != 0) {
+      fprintf(stderr, "tftp_send_ACK_wait_DATA : %s\n", tftp_strerror(errcode));
       quit(EXIT_FAILURE);
     }
     memcpy(&block, data + sizeof(uint16_t), sizeof(uint16_t));
@@ -146,12 +150,14 @@ void run(void) {
   
   // Envoie le dernier paquet ACK
   buffer_len = 512;
-  if (tftp_make_ack(buffer, &buffer_len, block) != 0) {
-    fprintf(stderr, "tftp_make_ack : erreur\n");
+  
+  if ((errcode = tftp_make_ack(buffer, &buffer_len, block)) != 0) {
+    fprintf(stderr, "tftp_make_ack : %s\n", tftp_strerror(errcode));
     quit(EXIT_FAILURE);
   }
-  if (tftp_send_last_ACK(&sock, &addrserv, buffer, buffer_len) != 0) {
-    fprintf(stderr, "tftp_send_last_ACK : erreur\n");
+  
+  if ((errcode = tftp_send_last_ACK(&sock, &addrserv, buffer, buffer_len)) != 0) {
+    fprintf(stderr, "tftp_send_last_ACK : %s\n", tftp_strerror(errcode));
     quit(EXIT_FAILURE);
   }
 }
