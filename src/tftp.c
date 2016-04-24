@@ -107,7 +107,7 @@ int tftp_send_error(SocketUDP *socket, const AdresseInternet *dst, uint16_t code
   // Construit le paquet ERROR
   size_t length = 512;
   char buffer[length];
-  ssize_t errcode;
+  size_t errcode;
   if ((errcode = tftp_make_error(buffer, &length, code, msg)) != 0) {
     return errcode;
   }
@@ -129,7 +129,7 @@ int tftp_send_RRQ_wait_DATA_with_timeout(SocketUDP *socket, const AdresseInterne
   // Construit le paquet RRQ
   size_t length = 512;
   char buffer[length];
-  ssize_t errcode;
+  size_t errcode;
   if ((errcode = tftp_make_rrq(buffer, &length, file)) != 0) {
     return errcode;
   }
@@ -142,8 +142,8 @@ int tftp_send_RRQ_wait_DATA_with_timeout(SocketUDP *socket, const AdresseInterne
   // Attend la réponse
   AdresseInternet con_buf;
   char res_buf[512];
-  ssize_t count;
-  if ((count = recvFromSocketUDP(socket, res_buf, 512, &con_buf, TIMEOUT)) == -1) {
+  size_t count;
+  if ((count = recvFromSocketUDP(socket, res_buf, 512, &con_buf, TIMEOUT)) == (size_t) -1) {
     if (errno == EINTR) {
       return ERECE;
     } else {
@@ -177,7 +177,7 @@ int tftp_send_RRQ_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   
   // Envoie le paquet RRQ avec plusieurs essais en cas d'echec
   unsigned int tries = 0;
-  ssize_t errcode;
+  size_t errcode;
   do {
     if ((errcode = tftp_send_RRQ_wait_DATA_with_timeout(socket, dst, file, connection, response, reslen)) == 0) {
       return 0;
@@ -260,10 +260,10 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   }
   
   // Attend le paquet DATA
-  ssize_t length = 512;
+  size_t length = 512;
   char buffer[length];
   AdresseInternet from;
-  if ((length = recvFromSocketUDP(socket, buffer, length, &from, TIMEOUT)) == -1) {
+  if ((length = recvFromSocketUDP(socket, buffer, length, &from, TIMEOUT)) == (size_t) -1) {
     if (errno == EINTR) {
       return ETIMO;
     } else {
