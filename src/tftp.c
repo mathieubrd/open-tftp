@@ -51,6 +51,45 @@ int tftp_make_rrq(char *buffer, size_t *length, const char *file) {
   return 0;
 }
 
+int tftp_make_rrq_opt(char *buffer, size_t *length, const char *fichier, size_t nbytes, size_t nblocks) {
+  // Vérifie les arguments
+  if (buffer == NULL || length == NULL || fichier == NULL) {
+    return EARGU;
+  }
+  
+  if (nbytes < 8 || nbytes > 65464) {
+    return EARGU;
+  }
+  
+  if (nblocks < 1 || nblocks > 65535) {
+    return EARGU;
+  }
+  
+  // Contruit un paquet RRQ sans option
+  size_t errcode;
+  if ((errcode = tftp_make_rrq(buffer, length, fichier)) != 0) {
+    return errcode;
+  }
+  
+  // Rajoute les options
+  char snbytes[6];
+  char snblocks[6];
+  
+  sprintf(snbytes, "%zu", nbytes);
+  sprintf(snblocks, "%zu", nblocks);
+  
+  memcpy(buffer + *length, "blksize", strlen("blksize") + 1);
+  *length += sizeof(char) * (strlen("blksize") + 1);
+  memcpy(buffer + *length, snbytes, strlen(snbytes) + 1);
+  *length += sizeof(char) * (strlen(snbytes) + 1);
+  memcpy(buffer + *length, "windowsize", strlen("windowsize") + 1);
+  *length += sizeof(char) * (strlen("windowsize") + 1);
+  memcpy(buffer + *length, snblocks, strlen(snblocks) + 1);
+  *length += sizeof(char) * (strlen(snblocks) + 1);
+  
+  return 0;
+}
+
 int tftp_make_data(char *buffer, size_t *length, uint16_t block, const char *data, size_t n) {
   // Vérifie les arguments
   if (buffer == NULL || length == NULL || *length > 512 || block < 1 || data == NULL || n > 508) {
