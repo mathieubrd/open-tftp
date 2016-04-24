@@ -14,6 +14,7 @@
 #define DATA 3
 #define ACK 4
 #define ERROR 5
+#define OACK 6
 
 // TFTP protocol error codes
 #define UNDEF 0
@@ -36,7 +37,7 @@
 #define MAX_TRIES 3
 
 int tftp_make_ack(char *buffer, size_t *length, uint16_t block);
-int tftp_make_oack(char *buffer, size_t *length, uint16_t bloc, size_t noctets, size_t nblocs);
+int tftp_make_oack(char *buffer, size_t *length, size_t nbytes, size_t nblocks);
 int tftp_make_rrq(char *buffer, size_t *length, const char *file);
 int tftp_make_rrq_opt(char *buffer, size_t *length, const char *fichier, size_t nbytes, size_t nblocs);
 int tftp_make_data(char *buffer, size_t *length, uint16_t block, const char *data, size_t n);

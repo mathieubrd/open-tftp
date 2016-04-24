@@ -31,6 +31,44 @@ int tftp_make_ack(char *buffer, size_t *length, uint16_t block) {
   return 0;
 }
 
+int tftp_make_oack(char *buffer, size_t *length, size_t nbytes, size_t nblocks) {
+  // Vérifie les arguments
+  if (buffer == NULL || length == NULL) {
+    return EARGU;
+  }
+  
+  if (nbytes < 8 || nbytes > 65464) {
+    return EARGU;
+  }
+  
+  if (nblocks < 1 || nblocks > 65535) {
+    return EARGU;
+  }
+  
+  // Construit le paquet
+  char snbytes[6];
+  char snblocks[6];
+  uint16_t opcode = htons(OACK);
+  
+  sprintf(snbytes, "%zu", nbytes);
+  sprintf(snblocks, "%zu", nblocks);
+  
+  memset(buffer, 0, *length);
+  *length = 0;
+  memcpy(buffer, &opcode, sizeof(uint16_t));
+  *length += sizeof(uint16_t);
+  memcpy(buffer + *length, "blksize", strlen("blksize") + 1);
+  *length += sizeof(char) * (strlen("blksize") + 1);
+  memcpy(buffer + *length, snbytes, strlen(snbytes) + 1);
+  *length += sizeof(char) * (strlen(snbytes) + 1);
+  memcpy(buffer + *length, "windowsize", strlen("windowsize") + 1);
+  *length += sizeof(char) * (strlen("windowsize") + 1);
+  memcpy(buffer + *length, snblocks, strlen(snblocks) + 1);
+  *length += sizeof(char) * (strlen(snblocks) + 1);
+  
+  return 0;
+}
+
 int tftp_make_rrq(char *buffer, size_t *length, const char *file) {
   // Vérifie les arguments
   if (buffer == NULL || length == NULL || *length > 512 || file == NULL) {

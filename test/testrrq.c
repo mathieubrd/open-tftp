@@ -8,8 +8,9 @@ int main(void) {
     char buffer[512];
     size_t errcode;
     
-    if ((errcode = tftp_make_rrq_opt(buffer, &length, "fichier", (size_t) 1024, (size_t) 5)) != 0) {
-        fprintf(stderr, "tftp_make_rrq_opt : %s\n", tftp_strerror(errcode));
+    if ((errcode = tftp_make_oack(buffer, &length, (size_t) 1024, (size_t) 512)) != (size_t) 0) {
+        fprintf(stderr, "tftp_make_oack : %s\n", tftp_strerror(errcode));
+        exit(EXIT_FAILURE);
     }
     
     uint16_t opcode;
@@ -17,19 +18,15 @@ int main(void) {
     opcode = ntohs(opcode);
     
     length = 0;
-    printf("OPcode: %d\n", opcode);
+    printf("opcode: %d\n", opcode);
     length += sizeof(uint16_t);
-    printf("Filename: %s\n", buffer + length);
-    length += strlen(buffer + length) + 1;
-    printf("mode: %s\n", buffer + length);
-    length += strlen(buffer + length) + 1;
-    printf("opt 1 name: %s\n", buffer + length);
-    length += strlen(buffer + length) + 1;
-    printf("opt 1 value: %s\n", buffer + length);
-    length += strlen(buffer + length) + 1;
-    printf("opt 2 name: %s\n", buffer + length);
-    length += strlen(buffer + length) + 1;
-    printf("opt 2 value: %s\n", buffer + length);
-
+    printf("opt 1: %s\n", buffer + length);
+    length += sizeof(char) * strlen(buffer + length) + 1;
+    printf("value 1: %s\n", buffer + length);
+    length += sizeof(char) * strlen(buffer + length) + 1;
+    printf("opt 2: %s\n", buffer + length);
+    length += sizeof(char) * strlen(buffer + length) + 1;
+    printf("value 2: %s\n", buffer + length);
+    
     return EXIT_SUCCESS;
 }
