@@ -8,6 +8,6 @@ testrrq: testrrq.c
 	
 clean:
 	$(RM) *.o
-	
+
 distclean:
 	$(RM) *.o testrrq
