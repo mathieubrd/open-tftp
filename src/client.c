@@ -10,6 +10,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+// Récupère les arguments
+// Retourne -1 si les arguments donnés sont invalides
+int parse_args(int argc, char **argv);
+// Affiche l'usage du programme
+void usage(char *progname);
 // Initialise la socket
 int initSocket(void);
 // Quitte le programme proprement
@@ -20,24 +25,17 @@ void run(void);
 void handle_sig(int sig);
 
 SocketUDP sock;
-char *ip = NULL;
-int port;
-char *filename = NULL;
-char *destfile = NULL;
+char *ip, *filename, *destfile = NULL;
+int *port = NULL;
+int *blksize, *windowsize = NULL;
 AdresseInternet *dst = NULL;
 
-int main(int argc, char **argv) {
-  // Vérifie les arguments
-  if (argc != 5) {
-    fprintf(stderr, "%s : ip port fichier destination\n", argv[0]);
+int main(int argc, char **argv) {  
+  // Récupère les arguments
+  if (parse_args(argc, argv) != 0) {
+    usage(argv[0]);
     exit(EXIT_FAILURE);
   }
-  
-  // Récuperation arguments
-  ip = argv[1];
-  port = atoi(argv[2]);
-  filename = argv[3];
-  destfile = argv[4];
   
   // Initialise la socket
   if (initSocket() != 0) {
@@ -66,6 +64,61 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
+int parse_args(int argc, char **argv) {
+    // Sur GNU, getopt ne s'arrête pas s'il rencontre un argument qui n'est pas
+    // accepté dans optstring.
+    // Sur un système POSIX non GNU (Mac OS X), getopt s'arrête s'il rencontre
+    // un argument qui n'est pas spécifié dans optstring.
+    // On doit donc récuperer manuellement l'ip et le port, puis les options
+    // et enfin, le fichier source et le fichier de destination.
+    
+    // Récupère l'adresse IP et le port
+    ip = argv[1];
+    if (ip == NULL) {
+      return -1;
+    }
+    port = malloc(sizeof(int));
+    *port = atoi(argv[2]);
+    if (port == NULL) {
+      return -1;
+    }
+    
+    // Récupère les options
+    int ch;
+    char *blksize, *windowsize;
+    optind += 2;
+    while ((ch = getopt(argc, argv, "b:w:")) != -1) {
+      switch (ch) {
+        case 'b':
+          blksize = malloc(sizeof(int));
+          *blksize = atoi(optarg);
+          break;
+        case 'w':
+          windowsize = malloc(sizeof(int));
+          *windowsize = atoi(optarg);
+          break;
+        default:
+          return -1;
+      }
+    }
+    
+    // Récupère le nom du fichier source et de destination
+    filename = argv[optind];
+    if (filename == NULL) {
+      return -1;
+    }
+    destfile = argv[optind + 1];
+    if (destfile == NULL) {
+      return -1;
+    }
+    
+    return 0;
+}
+
+void usage(char *progname) {
+    fprintf(stderr, "Usage: %s ip port [-b blksize] [-w windowsize] src dest\n", progname);
+}
+
 void handle_sig(int sig) {
   if (sig == SIGINT || sig == SIGQUIT) {
     quit(EXIT_SUCCESS);
@@ -78,7 +131,7 @@ int initSocket(void) {
     fprintf(stderr, "initSocketUDP : impossible de créer la socket.\n");
     return -1;
   }
-  dst = AdresseInternet_new(ip, port);
+  dst = AdresseInternet_new(ip, (uint16_t) *port);
   if (dst == NULL) {
     fprintf(stderr, "AdresseInternet_new : impossible de créer une AdresseInternet.\n");
     return -1;
