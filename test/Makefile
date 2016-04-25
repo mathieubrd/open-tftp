@@ -1,11 +1,10 @@
-CFLAGS = -std=c11 -Wall -Werror -Wextra -pedantic -D_XOPEN_SOURCE=600 -I../include
+CFLAGS = -std=c11 -Wall -Werror -Wextra -pedantic -D_XOPEN_SOURCE=600
 
-all: bin/testrrq
-
-bin/testrrq: testrrq.c
-	cd .. && make clean && make
-	mkdir bin/
-	$(CC) $(CFLAGS) $< -o $@ ../obj/tftp.o ../obj/SocketUDP.o ../obj/AdresseInternet.o
+all: bin/testopt
+	
+bin/testopt: testopt.c
+	mkdir -p bin/
+	$(CC) $(CFLAGS) $< -o $@
 	
 clean:
 	$(RM) *.o
