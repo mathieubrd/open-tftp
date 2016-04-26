@@ -33,8 +33,13 @@
 #define EUNKN 7
 #define ENOPA 8
 
+// Other constants
 #define TIMEOUT 5
 #define MAX_TRIES 3
+#define MIN_BLKSIZE 8
+#define MAX_BLKSIZE 65464
+#define MIN_WINDOWSIZE 8
+#define MAX_WINDOWSIZE 65535
 
 int tftp_make_ack(char *buffer, size_t *length, uint16_t block);
 int tftp_make_oack(char *buffer, size_t *length, size_t nbytes, size_t nblocks);
