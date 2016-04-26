@@ -3,13 +3,13 @@ LDFLAGS = -lpthread
 
 all: bin/server bin/client
 
-bin/server: src/server.c obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o obj/config.o
+bin/server: src/server.c obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o
 	mkdir -p bin/
-	$(CC) $(CFLAGS) $< -o $@ obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o obj/config.o $(LDFLAGS)
+	$(CC) $(CFLAGS) $< -o $@ obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o $(LDFLAGS)
 
-bin/client: src/client.c obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o obj/config.o
+bin/client: src/client.c obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o
 	mkdir -p bin/
-	$(CC) $(CFLAGS) $< -o $@ obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o obj/config.o
+	$(CC) $(CFLAGS) $< -o $@ obj/AdresseInternet.o obj/SocketUDP.o obj/tftp.o
 
 obj/AdresseInternet.o: src/AdresseInternet.c
 	mkdir -p obj/
@@ -20,10 +20,6 @@ obj/SocketUDP.o: src/SocketUDP.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 obj/tftp.o: src/tftp.c
-	mkdir -p obj/
-	$(CC) $(CFLAGS) -c $< -o $@
-	
-obj/config.o: src/config.c
 	mkdir -p obj/
 	$(CC) $(CFLAGS) -c $< -o $@
 
