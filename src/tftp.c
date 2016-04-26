@@ -12,6 +12,36 @@ static char *errors[] = {
   "Aucun paquet reçu",
 };
 
+int tftp_get_opt(char *packet, size_t *nbytes, size_t *nblocks) {
+  // Vérifie les arguments
+  if (packet == NULL) {
+    return EARGU;
+  }
+  
+  // Récupère l'opcode
+  uint16_t opcode;
+  memcpy(&opcode, packet, sizeof(uint16_t));
+  opcode = ntohs(opcode);
+  size_t offset = sizeof(uint16_t);
+  
+  if (nblocks != NULL) {
+    
+  }
+  
+  char blksize[6];
+  
+  if (opcode == RRQ) {
+    offset += strlen(packet + offset) + 1;
+    offset += strlen(packet + offset) + 1;
+  }
+  
+  offset += strlen(packet + offset) + 1;
+  memcpy(blksize, packet + offset, strlen(packet + offset) + 1);
+  *nbytes = (size_t) atoi(blksize);
+  
+  return 0;
+}
+
 int tftp_make_ack(char *buffer, size_t *length, uint16_t block) {
   // Vérifie les arguments
   if (buffer == NULL || length == NULL || *length > 512 || block < 1) {
@@ -31,18 +61,23 @@ int tftp_make_ack(char *buffer, size_t *length, uint16_t block) {
   return 0;
 }
 
-int tftp_make_oack(char *buffer, size_t *length, size_t nbytes, size_t nblocks) {
+int tftp_make_OACK(char *buffer, size_t *length, size_t nbytes, size_t nblocks) {
   // Vérifie les arguments
   if (buffer == NULL || length == NULL) {
     return EARGU;
   }
   
-  if (nbytes < MIN_BLKSIZE || nbytes > MAX_BLKSIZE) {
-    return EARGU;
+  // Modifie les options si elles sont invalides
+  if (nbytes < MIN_BLKSIZE) {
+    nbytes = MIN_BLKSIZE;
+  } else if (nbytes > MAX_BLKSIZE) {
+    nbytes = MAX_BLKSIZE;
   }
   
-  if (nblocks < 1 || nblocks > 65535) {
-    return EARGU;
+  if (nblocks < MIN_WINDOWSIZE) {
+    nblocks = MIN_WINDOWSIZE;
+  } else if (nblocks > MAX_WINDOWSIZE) {
+    nblocks = MAX_WINDOWSIZE;
   }
   
   // Construit le paquet
@@ -57,14 +92,18 @@ int tftp_make_oack(char *buffer, size_t *length, size_t nbytes, size_t nblocks) 
   *length = 0;
   memcpy(buffer, &opcode, sizeof(uint16_t));
   *length += sizeof(uint16_t);
-  memcpy(buffer + *length, "blksize", strlen("blksize") + 1);
-  *length += sizeof(char) * (strlen("blksize") + 1);
-  memcpy(buffer + *length, snbytes, strlen(snbytes) + 1);
-  *length += sizeof(char) * (strlen(snbytes) + 1);
-  memcpy(buffer + *length, "windowsize", strlen("windowsize") + 1);
-  *length += sizeof(char) * (strlen("windowsize") + 1);
-  memcpy(buffer + *length, snblocks, strlen(snblocks) + 1);
-  *length += sizeof(char) * (strlen(snblocks) + 1);
+  if (nbytes != (size_t) 0) {
+    memcpy(buffer + *length, "blksize", strlen("blksize") + 1);
+    *length += sizeof(char) * (strlen("blksize") + 1);
+    memcpy(buffer + *length, snbytes, strlen(snbytes) + 1);
+    *length += sizeof(char) * (strlen(snbytes) + 1);
+  }
+  if (nblocks != (size_t) 0) {
+    memcpy(buffer + *length, "windowsize", strlen("windowsize") + 1);
+    *length += sizeof(char) * (strlen("windowsize") + 1);
+    memcpy(buffer + *length, snblocks, strlen(snblocks) + 1);
+    *length += sizeof(char) * (strlen(snblocks) + 1);
+  }
   
   return 0;
 }
@@ -95,14 +134,6 @@ int tftp_make_rrq_opt(char *buffer, size_t *length, const char *fichier, size_t 
     return EARGU;
   }
   
-  if (nbytes < 8 || nbytes > 65464) {
-    return EARGU;
-  }
-  
-  if (nblocks < 1 || nblocks > 65535) {
-    return EARGU;
-  }
-  
   // Contruit un paquet RRQ sans option
   size_t errcode;
   if ((errcode = tftp_make_rrq(buffer, length, fichier)) != 0) {
@@ -116,21 +147,26 @@ int tftp_make_rrq_opt(char *buffer, size_t *length, const char *fichier, size_t 
   sprintf(snbytes, "%zu", nbytes);
   sprintf(snblocks, "%zu", nblocks);
   
-  memcpy(buffer + *length, "blksize", strlen("blksize") + 1);
-  *length += sizeof(char) * (strlen("blksize") + 1);
-  memcpy(buffer + *length, snbytes, strlen(snbytes) + 1);
-  *length += sizeof(char) * (strlen(snbytes) + 1);
-  memcpy(buffer + *length, "windowsize", strlen("windowsize") + 1);
-  *length += sizeof(char) * (strlen("windowsize") + 1);
-  memcpy(buffer + *length, snblocks, strlen(snblocks) + 1);
-  *length += sizeof(char) * (strlen(snblocks) + 1);
+  if (nbytes != (size_t) 0) {
+    memcpy(buffer + *length, "blksize", strlen("blksize") + 1);
+    *length += sizeof(char) * (strlen("blksize") + 1);
+    memcpy(buffer + *length, snbytes, strlen(snbytes) + 1);
+    *length += sizeof(char) * (strlen(snbytes) + 1);
+  }
+  
+  if (nblocks != (size_t) 0) {
+    memcpy(buffer + *length, "windowsize", strlen("windowsize") + 1);
+    *length += sizeof(char) * (strlen("windowsize") + 1);
+    memcpy(buffer + *length, snblocks, strlen(snblocks) + 1);
+    *length += sizeof(char) * (strlen(snblocks) + 1);
+  }
   
   return 0;
 }
 
 int tftp_make_data(char *buffer, size_t *length, uint16_t block, const char *data, size_t n) {
   // Vérifie les arguments
-  if (buffer == NULL || length == NULL || *length > 512 || block < 1 || data == NULL || n > 508) {
+  if (buffer == NULL || length == NULL || data == NULL) {
     return EARGU;
   }
   
@@ -175,6 +211,42 @@ int tftp_make_error(char *buffer, size_t *length, uint16_t errcode, const char *
   return 0;
 }
 
+int tftp_wait_DATA_with_timeout(SocketUDP *socket, AdresseInternet *from, char *res, size_t *reslen) {
+  // Vérifie les arguments
+  if (socket == NULL || from == NULL || res == NULL || reslen == NULL) {
+    return EARGU;
+  }
+  
+  // Attend le paquet DATA
+  AdresseInternet frombuf;
+  char resbuf[*reslen];
+  size_t count;
+  
+  if ((count = recvFromSocketUDP(socket, resbuf, *reslen, &frombuf, TIMEOUT)) == (size_t) -1) {
+    if (errno == EINTR) {
+      return ETIME;
+    } else {
+      return ERECE;
+    }
+  }
+  
+  // Vérifie que le paquet reçu est de type DATA
+  uint16_t opcode;
+  memcpy(&opcode, resbuf, sizeof(uint16_t));
+  opcode = ntohs(opcode);
+  if (opcode != DATA) {
+    return ENOPA;
+  }
+  
+  if (AdresseInternet_copy(from, &frombuf) != 0) {
+    return EUNKN;
+  }
+  memcpy(res, resbuf, count);
+  *reslen = count;
+  
+  return 0;
+}
+
 int tftp_send_error(SocketUDP *socket, const AdresseInternet *dst, uint16_t code, const char *msg) {
   // Vérifie les arguments
   if (socket == NULL || dst == NULL || msg == NULL) {
@@ -192,6 +264,39 @@ int tftp_send_error(SocketUDP *socket, const AdresseInternet *dst, uint16_t code
   // Envoie le paquet ERROR
   if (writeToSocketUDP(socket, dst, buffer, length) == -1) {
     return ESEND;
+  }
+  
+  return 0;
+}
+
+int tftp_send_OACK(SocketUDP *socket, const AdresseInternet *dst, char *packet, size_t packlen) {
+  // Vérifie les arguments
+  if (socket == NULL || dst == NULL || packet == NULL) {
+    return EARGU;
+  }
+  
+  // Envoie le paquet OACK
+  if (writeToSocketUDP(socket, dst, packet, packlen) == (ssize_t) -1) {
+    return ESEND;
+  }
+  
+  return 0;
+}
+
+int tftp_send_RRQ_wait_OACK(SocketUDP *socket, const AdresseInternet *dst, AdresseInternet *from, char *packet, size_t packlen, char *res, size_t *reslen) {
+  // Vérifie les arguments
+  if (socket == NULL || dst == NULL || from == NULL || packet == NULL || res == NULL || reslen == NULL) {
+    return EARGU;
+  }
+  
+  // Envoie le paquet RRQ
+  if (writeToSocketUDP(socket, dst, packet, packlen) == (ssize_t) -1) {
+    return ESEND;
+  }
+  
+  // Attend la réponse
+  if (recvFromSocketUDP(socket, res, *reslen, from, -1) == (ssize_t) -1) {
+    return ERECE;
   }
   
   return 0;
@@ -222,7 +327,7 @@ int tftp_send_RRQ_wait_DATA_with_timeout(SocketUDP *socket, const AdresseInterne
   size_t count;
   if ((count = recvFromSocketUDP(socket, res_buf, 512, &con_buf, TIMEOUT)) == (size_t) -1) {
     if (errno == EINTR) {
-      return ERECE;
+      return ETIME;
     } else {
       return ERECE;
     }
@@ -269,7 +374,7 @@ int tftp_send_RRQ_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
 
 int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const char *packet, size_t packlen) {
   // Vérifie les arguments
-  if (socket == NULL || dst == NULL || packet == NULL || packlen > 512) {
+  if (socket == NULL || dst == NULL || packet == NULL) {
     return EARGU;
   }
   
@@ -320,7 +425,7 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
 
 int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const char *packet, size_t packlen, char *res, size_t *reslen) {
   // Vérifie les arguments
-  if (socket == NULL || dst == NULL || packet == NULL || packlen > 512 || res == NULL || reslen == NULL) {
+  if (socket == NULL || dst == NULL || packet == NULL || res == NULL || reslen == NULL) {
     return EARGU;
   }
   
@@ -362,7 +467,7 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
 
 int tftp_send_last_ACK(SocketUDP *socket, const AdresseInternet *dst, const char *packet, size_t packlen) {
   // Vérifie les arguments
-  if (socket == NULL || dst == NULL || packet == NULL || packlen > 512) {
+  if (socket == NULL || dst == NULL || packet == NULL) {
     return EARGU;
   }
   

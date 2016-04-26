@@ -17,6 +17,8 @@ struct t_rrq {
   SocketUDP *sock;
   AdresseInternet *addr;
   char *filename;
+  size_t blksize;
+  size_t windowsize;
 };
 
 // Créé et attache la socket
@@ -32,7 +34,6 @@ void handle_sig(int sig);
 
 int port;
 SocketUDP *sock = NULL;
-SocketUDP *sock_cli = NULL;
 
 int main(int argc, char **argv) {
   // Vérifie les argument
@@ -101,8 +102,17 @@ void handle_RRQ(void) {
     return;
   }
   
-  // Lance le traitement du paquet RRQ dans un thread
   struct t_rrq rrq;
+  
+  // Récupère les options de la requête
+  size_t errcode;
+  
+  if ((errcode = tftp_get_opt(rrq_buf, &rrq.blksize, &rrq.windowsize)) != 0) {
+    fprintf(stderr, "tftp_get_opt: %s\n", tftp_strerror(errcode));
+    return;
+  }
+  
+  // Lance le traitement du paquet RRQ dans un thread
   rrq.sock = sock;
   rrq.addr = &addr_cli;
   rrq.filename = malloc(sizeof(char) * strlen(rrq_buf + sizeof(uint16_t)) + 1);
@@ -141,22 +151,44 @@ void quit(int code) {
       free(sock);
   }
   
-  if (sock_cli != NULL) {
-    if (closeSocketUDP(sock) == -1) {
-      fprintf(stderr, "closeSocketUDP : impossible de fermer la socket du client.\n");
-      exit(EXIT_FAILURE);
-    }
-    free(sock_cli);
-  }
-  
   exit(code);
 }
 
 void *process_RRQ(void *arg) {
   struct t_rrq *rrq = (struct t_rrq *) arg;
   SocketUDP *sock = rrq->sock;
+  SocketUDP *sock_cli;
   AdresseInternet *addr_cli = rrq->addr;
   char *filename = rrq->filename;
+  size_t blksize = rrq->blksize;
+  size_t windowsize = rrq->windowsize;
+  
+  // Initialise une nouvelle socket dédiée au client
+  sock_cli = malloc(sizeof(SocketUDP));
+  if (initSocket(sock_cli, SOCK_NO_BIND) != 0) {
+    tftp_send_error(sock, addr_cli, UNDEF, "Une erreur de connexion est survenue.");
+    return NULL;
+  }
+    
+  // Si des options ont été données, construit envoie un paquet OACK
+  if (blksize != (size_t) 0 || windowsize != (size_t) 0) {
+    size_t oackbuf_len = (size_t) 512;
+    char oackbuf[oackbuf_len];
+    size_t errcode;
+    
+    if ((errcode = tftp_make_OACK(oackbuf, &oackbuf_len, blksize, windowsize)) != 0) {
+      fprintf(stderr, "tftp_make_OACK: %s\n", tftp_strerror(errcode));
+      return NULL;
+    }
+    
+    if ((errcode = tftp_send_OACK(sock_cli, addr_cli, oackbuf, oackbuf_len)) != 0) {
+      fprintf(stderr, "tftp_send_OACK: %s\n", tftp_strerror(errcode));
+      return NULL;
+    }
+  } else {
+    blksize = (size_t) 512;
+    windowsize = (size_t) 1;
+  }
   
   // Ouvre le fichier demandé, envoie une erreur si l'ouvertue échoue
   int fd = open(filename, O_RDONLY);
@@ -170,23 +202,20 @@ void *process_RRQ(void *arg) {
   }
 
   if (fd != -1) {
-    // Initialise une nouvelle socket dédiée au client
-    sock_cli = malloc(sizeof(SocketUDP));
-    if (initSocket(sock_cli, SOCK_NO_BIND) != 0) {
-      tftp_send_error(sock, addr_cli, UNDEF, "Une erreur de connexion est survenue.");
-      return NULL;
-    }
-    
     // Lit le fichier
-    char fcontent_buf[508];
+    char fcontent_buf[blksize];
     size_t count;
     uint16_t block = 1;
     
+    printf("read %zu\n", blksize);
+    
     while ((count = read(fd, fcontent_buf, sizeof(fcontent_buf))) > 0) {
       // Construit le paquet DATA
-      size_t data_len = 512;
+      size_t data_len = blksize + 4;
       char data_buf[data_len];
       ssize_t errcode;
+      
+      printf("make data\n");
       
       if ((errcode = tftp_make_data(data_buf, &data_len, block, fcontent_buf, count)) != 0){
         fprintf(stderr, "tftp_make_data : %s\n", tftp_strerror(errcode));
@@ -194,12 +223,16 @@ void *process_RRQ(void *arg) {
         break;
       }
       
+      printf("send data wait ack\n");
+      
       // Envoie le paquet DATA et attend le paquet ACK
       if ((errcode = tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len)) != 0) {
         fprintf(stderr, "tftp_send_DATA_wait_ACK : %s\n", tftp_strerror(errcode));
         tftp_send_error(sock_cli, addr_cli, UNDEF, "Une erreur est survenue.");
         break;
       }
+      
+      printf("wait data\n");
       
       block++;
     }
