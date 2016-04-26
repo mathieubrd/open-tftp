@@ -37,7 +37,7 @@ int tftp_make_oack(char *buffer, size_t *length, size_t nbytes, size_t nblocks) 
     return EARGU;
   }
   
-  if (nbytes < 8 || nbytes > 65464) {
+  if (nbytes < MIN_BLKSIZE || nbytes > MAX_BLKSIZE) {
     return EARGU;
   }
   
