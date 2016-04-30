@@ -371,16 +371,16 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
   
   // Envoie le paquet DATA
   size_t tries = 0;
+  if (writeToSocketUDP(socket, dst, packet, packlen) < 0) {
+    return ESEND;
+  }
+  
   while (tries <= MAX_TRIES) {
-    if (writeToSocketUDP(socket, dst, packet, packlen) < 0) {
-      return ESEND;
-    }
-    
     // Attend un paquet
     size_t length = 512;
     char buffer[length];
     if (recvFromSocketUDP(socket, buffer, length, NULL, TIMEOUT) < 0) {
-      return ERECE;
+      continue;
     }
     
     // Vérifie si c'est un paquet ACK
@@ -388,6 +388,7 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
     opcode = ntohs(opcode);
     if (opcode != ACK) {
       tftp_send_error(socket, dst, ILLEG, "Un paquet ACK été attendu.");
+      continue;
     } else {
       // Vérifie si les numéros de bloc correspondent
       uint16_t blockDATA;
@@ -426,21 +427,23 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   }
   
   // Attend le paquet DATA
-  size_t length = 512;
-  char buffer[length];
-  AdresseInternet from;
-  if ((length = recvFromSocketUDP(socket, buffer, length, &from, TIMEOUT)) == (size_t) -1) {
-    if (errno == EINTR) {
-      return ETIMO;
-    } else {
-      return ERECE;
+  size_t tries = 0;
+  
+  while (tries < MAX_TRIES) {
+    size_t length = 512;
+    char buffer[length];
+    AdresseInternet from;
+    if ((length = recvFromSocketUDP(socket, buffer, length, &from, TIMEOUT)) == (size_t) -1) {
+      continue;
     }
+    
+    memcpy(res, buffer, length);
+    *reslen = (size_t) length;
+    
+    return 0;
   }
   
-  memcpy(res, buffer, length);
-  *reslen = (size_t) length;
-
-  return 0;
+  return ETIMO;
 }
 
 int tftp_send_last_ACK(SocketUDP *socket, const AdresseInternet *dst, const char *packet, size_t packlen) {
