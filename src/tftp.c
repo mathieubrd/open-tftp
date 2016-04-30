@@ -7,7 +7,7 @@ char *errors[] = {
   "Impossible d'envoyer le paquet",
   "Impossible de recevoir le paquet",
   "Le délai d'attendre est dépassé",
-  "Le paquet donné est invalide",
+  "Le paquet est invalide",
   "Erreur inconnue",
   "Aucun paquet reçu",
 };
@@ -230,14 +230,6 @@ int tftp_wait_DATA_with_timeout(SocketUDP *socket, AdresseInternet *from, char *
     }
   }
   
-  // Vérifie que le paquet reçu est de type DATA
-  uint16_t opcode;
-  memcpy(&opcode, resbuf, sizeof(uint16_t));
-  opcode = ntohs(opcode);
-  if (opcode != DATA) {
-    return ENOPA;
-  }
-  
   if (AdresseInternet_copy(from, &frombuf) != 0) {
     return EUNKN;
   }
@@ -331,14 +323,6 @@ int tftp_send_RRQ_wait_DATA_with_timeout(SocketUDP *socket, const AdresseInterne
     } else {
       return ERECE;
     }
-  }
-  
-  // Vérifie que le paquet reçu est de type DATA
-  uint16_t opcode;
-  memcpy(&opcode, res_buf, sizeof(uint16_t));
-  opcode = ntohs(opcode);
-  if (opcode != DATA) {
-    return ENOPA;
   }
   
   if (AdresseInternet_copy(connection, &con_buf) != 0) {
@@ -451,12 +435,6 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
     } else {
       return ERECE;
     }
-  }
-  
-  // Vérifie si c'est un packet DATA
-  memcpy(&opcode, buffer, sizeof(uint16_t));
-  if (opcode != htons(DATA)) {
-    return ENOPA;
   }
   
   memcpy(res, buffer, length);
@@ -640,7 +618,7 @@ int tftp_print_DATA(char *packet) {
   bloc = ntohs(bloc);
   
   // Affiche le paquet
-  printf("ACK - %d - raw data\n", bloc);
+  printf("DATA - %d - raw data\n", bloc);
   
   return 0;
 }
