@@ -41,6 +41,8 @@
 #define MIN_WINDOWSIZE 1
 #define MAX_WINDOWSIZE 65535
 
+extern char *errors[];
+
 // Routines qui fabriquent des paquets
 int tftp_make_ack(char *buffer, size_t *length, uint16_t block);
 int tftp_make_OACK(char *buffer, size_t *length, size_t nbytes, size_t nblocks);
@@ -66,6 +68,7 @@ int tftp_print_RRQ(char *packet);
 int tftp_print_ACK(char *packet);
 int tftp_print_OACK(char *packet);
 int tftp_print_DATA(char *packet);
+int tftp_print_ERROR(char *packet);
 
 // Routines utilitaires
 int tftp_get_opt(char *packet, size_t *nbytes, size_t *nblocks);

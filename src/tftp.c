@@ -1,6 +1,6 @@
 #include <tftp.h>
 
-static char *errors[] = {
+char *errors[] = {
   NULL,
   "Argument invalide",
   "Code d'erreur invalide",
@@ -492,4 +492,181 @@ char *tftp_strerror(ssize_t errcode) {
   } else {
     return "Aucune erreur";
   }
+}
+
+int tftp_print(char *packet) {
+    // Vérifie l'argument
+    if (packet == NULL) {
+      return EARGU;
+    }
+    
+    // Vérifie l'opcode
+    uint16_t opcode;
+    memcpy(&opcode, packet, sizeof(uint16_t));
+    opcode = ntohs(opcode);
+    
+    // Appelle la bonne routine en fonction de l'opcode
+    switch (opcode) {
+      case (uint16_t) RRQ:
+	tftp_print_RRQ(packet);
+	break;
+      
+      case (uint16_t) ACK:
+	tftp_print_ACK(packet);
+	break;
+	
+      case (uint16_t) OACK:
+	tftp_print_OACK(packet);
+	break;
+	
+      case (uint16_t) ERROR:
+	tftp_print_ERROR(packet);
+	break;
+    }
+    
+    return EINVA;
+}
+
+int tftp_print_RRQ(char *packet) {
+  // Vérifie l'argument
+  if (packet == NULL) {
+    return EARGU;
+  }
+  
+  // Vérifie l'opcode
+  uint16_t opcode;
+  memcpy(&opcode, packet, sizeof(uint16_t));
+  opcode = ntohs(opcode);
+  if (opcode != (uint16_t) RRQ) {
+    return EINVA;
+  }
+  size_t offset = sizeof(uint16_t);
+  
+  // Récupère le nom du fichier demandé
+  char *filename = packet + offset;
+  offset += strlen(packet + offset) + 1;
+  
+  // Récupère le mode de transmission
+  char *mode = packet + offset;
+  offset += strlen(packet + offset) + 1;
+  
+  // Affiche le paquet
+  printf("RRQ - %s - %s", filename, mode);
+  
+  // Affiche les éventuelles options
+  size_t blksize = 0;
+  tftp_get_opt(packet, &blksize, NULL);
+  if (blksize != 0) {
+    printf(" - blksize: %lu", blksize);
+  }
+  
+  printf("\n");
+  
+  return 0;
+}
+
+int tftp_print_ACK(char *packet) {
+  // Vérifie l'argument
+  if (packet == NULL) {
+    return EARGU;
+  }
+  
+  // Vérifie l'opcode
+  uint16_t opcode;
+  memcpy(&opcode, packet, sizeof(uint16_t));
+  opcode = ntohs(opcode);
+  if (opcode != (uint16_t) ACK) {
+    return EINVA;
+  }
+  size_t offset = sizeof(uint16_t);
+  
+  // Récupère le numéro de bloc
+  uint16_t bloc;
+  memcpy(&bloc, packet + offset, sizeof(uint16_t));
+  bloc = ntohs(bloc);
+  
+  // Affiche le paquet
+  printf("ACK - %d\n", bloc);
+  
+  return 0;
+}
+
+int tftp_print_OACK(char *packet) {
+  // Vérifie l'argument
+  if (packet == NULL) {
+    return EARGU;
+  }
+  
+  // Vérifie l'opcode
+  uint16_t opcode;
+  memcpy(&opcode, packet, sizeof(uint16_t));
+  opcode = ntohs(opcode);
+  if (opcode != (uint16_t) OACK) {
+    return EINVA;
+  }
+  
+  // Récupère les options
+  size_t blksize = 0;
+  tftp_get_opt(packet, &blksize, NULL);
+  
+  // Affiche le paquet
+  printf("OACK - blksize: %lu\n", blksize);
+  
+  return 0;
+}
+
+int tftp_print_DATA(char *packet) {
+  // Vérifie l'argument
+  if (packet == NULL) {
+    return EARGU;
+  }
+  
+  // Vérifie l'opcode
+  uint16_t opcode;
+  memcpy(&opcode, packet, sizeof(uint16_t));
+  opcode = ntohs(opcode);
+  if (opcode != (uint16_t) DATA) {
+    return EINVA;
+  }
+  size_t offset = sizeof(uint16_t);
+  
+  // Récupère le numéro de bloc
+  uint16_t bloc;
+  memcpy(&bloc, packet + offset, sizeof(uint16_t));
+  bloc = ntohs(bloc);
+  
+  // Affiche le paquet
+  printf("ACK - %d - raw data\n", bloc);
+  
+  return 0;
+}
+
+int tftp_print_ERROR(char *packet) {
+  // Vérifie l'argument
+  if (packet == NULL) {
+    return EARGU;
+  }
+  
+  // Vérifie l'opcode
+  uint16_t opcode;
+  memcpy(&opcode, packet, sizeof(uint16_t));
+  opcode = ntohs(opcode);
+  if (opcode != (uint16_t) ERROR) {
+    return EINVA;
+  }
+  size_t offset = sizeof(uint16_t);
+  
+  // Récupère le code d'erreur
+  uint16_t errcode;
+  memcpy(&errcode, packet + offset, sizeof(uint16_t));
+  errcode = ntohs(errcode);
+  offset += sizeof(uint16_t);
+  
+  // Récupère le message d'erreur
+  char *err = packet + offset;
+  
+  // Affiche le paquet
+  printf("ERROR - %d - %s\n", errcode, err);
+  
+  return 0;
 }
