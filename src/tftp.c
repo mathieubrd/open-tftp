@@ -518,6 +518,10 @@ int tftp_print(char *packet) {
       case (uint16_t) OACK:
 	tftp_print_OACK(packet);
 	break;
+      
+      case (uint16_t) DATA:
+	tftp_print_DATA(packet);
+	break;
 	
       case (uint16_t) ERROR:
 	tftp_print_ERROR(packet);
