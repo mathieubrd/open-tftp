@@ -185,7 +185,7 @@ void run(void) {
   memcpy(&block, buffer + sizeof(uint16_t), sizeof(uint16_t));
   block = ntohs(block);
   
-  printf("block reçu : %zu\n", buffer_len - 4);
+  printf("block reçu : %d\n", block);
   
   // Ouvre le fichier
   int fd = open(destfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
@@ -217,7 +217,7 @@ void run(void) {
     memcpy(&block, data + sizeof(uint16_t), sizeof(uint16_t));
     block = ntohs(block);
     
-    printf("block reçu : %zu\n", data_len - 4);
+    printf("block reçu : %d\n", block);
     
     if (write(fd, data + sizeof(uint16_t) * 2, data_len - sizeof(uint16_t) * 2) == -1) {
       perror("write");
