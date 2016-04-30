@@ -92,6 +92,9 @@ void handle_RRQ(void) {
     return;
   }
   
+  printf("Received packet -->\n");
+  tftp_print(rrq_buf);
+  
   // Si le paquet n'est pas de type RRQ, envoie une erreur
   uint16_t opcode;
   memcpy(&opcode, rrq_buf, sizeof(uint16_t));
@@ -116,6 +119,8 @@ void handle_RRQ(void) {
   rrq.sock = sock;
   rrq.addr = &addr_cli;
   rrq.filename = malloc(sizeof(char) * strlen(rrq_buf + sizeof(uint16_t)) + 1);
+  rrq.blksize = (size_t) 0;
+  rrq.windowsize = (size_t) 0;
   strncpy(rrq.filename, rrq_buf + sizeof(uint16_t), strlen(rrq_buf + sizeof(uint16_t)) + 1);
   pthread_t thread;
   if (pthread_create(&thread, NULL, process_RRQ, &rrq) != 0) {
@@ -181,12 +186,14 @@ void *process_RRQ(void *arg) {
       return NULL;
     }
     
+    printf("Paquet sent -->\n");
+    tftp_print(oackbuf);
     if ((errcode = tftp_send_OACK(sock_cli, addr_cli, oackbuf, oackbuf_len)) != 0) {
       fprintf(stderr, "tftp_send_OACK: %s\n", tftp_strerror(errcode));
       return NULL;
     }
   } else {
-    blksize = (size_t) 512;
+    blksize = (size_t) 508;
     windowsize = (size_t) 1;
   }
   
@@ -207,15 +214,11 @@ void *process_RRQ(void *arg) {
     size_t count;
     uint16_t block = 1;
     
-    printf("read %zu\n", blksize);
-    
     while ((count = read(fd, fcontent_buf, sizeof(fcontent_buf))) > 0) {
       // Construit le paquet DATA
       size_t data_len = blksize + 4;
       char data_buf[data_len];
       ssize_t errcode;
-      
-      printf("make data\n");
       
       if ((errcode = tftp_make_data(data_buf, &data_len, block, fcontent_buf, count)) != 0){
         fprintf(stderr, "tftp_make_data : %s\n", tftp_strerror(errcode));
@@ -223,7 +226,12 @@ void *process_RRQ(void *arg) {
         break;
       }
       
-      printf("send data wait ack\n");
+      uint16_t opcode;
+      memcpy(&opcode, data_buf, sizeof(uint16_t));
+      opcode = ntohs(opcode);
+      
+      printf("Paquet sent -->\n");
+      tftp_print(data_buf);
       
       // Envoie le paquet DATA et attend le paquet ACK
       if ((errcode = tftp_send_DATA_wait_ACK(sock_cli, addr_cli, data_buf, data_len)) != 0) {
@@ -232,7 +240,8 @@ void *process_RRQ(void *arg) {
         break;
       }
       
-      printf("wait data\n");
+      printf("Received packet -->\n");
+      tftp_print(data_buf);
       
       block++;
     }
