@@ -380,6 +380,7 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
     size_t length = 512;
     char buffer[length];
     if (recvFromSocketUDP(socket, buffer, length, NULL, TIMEOUT) < 0) {
+      tries++;
       continue;
     }
     
@@ -388,6 +389,7 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
     opcode = ntohs(opcode);
     if (opcode != ACK) {
       tftp_send_error(socket, dst, ILLEG, "Un paquet ACK été attendu.");
+      tries++;
       continue;
     } else {
       // Vérifie si les numéros de bloc correspondent
@@ -401,8 +403,6 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
         return 0;
       }
     }
-    
-    tries++;
   }
   
   return ENOPA;
@@ -434,6 +434,7 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
     char buffer[length];
     AdresseInternet from;
     if ((length = recvFromSocketUDP(socket, buffer, length, &from, TIMEOUT)) == (size_t) -1) {
+      tries++;
       continue;
     }
     
