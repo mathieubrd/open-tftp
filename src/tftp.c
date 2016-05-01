@@ -37,37 +37,17 @@ int tftp_get_opt(char *packet, size_t *nbytes, size_t *nblocks) {
     offset += strlen(packet + offset) + 1;
   }
   
-  if (nbytes != NULL) {
+  if (strcmp(packet + offset, "blksize") == 0) {
     offset += strlen(packet + offset) + 1;
     memcpy(blksize, packet + offset, strlen(packet + offset) + 1);
     *nbytes = (size_t) atoi(blksize);
-    
-    if (*nbytes != 0) {
-      if (*nbytes < MIN_BLKSIZE) {
-	*nbytes = MIN_BLKSIZE;
-      }
-      
-      if (*nbytes > MAX_BLKSIZE) {
-	*nbytes = MAX_BLKSIZE;
-      }
-    }
+    offset += strlen(packet + offset) + 1;
   }
   
-  if (nblocks != NULL) {
-    offset += strlen(packet + offset) + 1;
+  if (strcmp(packet + offset, "windowsize") == 0) {
     offset += strlen(packet + offset) + 1;
     memcpy(windowsize, packet + offset, strlen(packet + offset) + 1);
     *nblocks = (size_t) atoi(windowsize);
-    
-    if (*nblocks != 0) {
-      if (*nblocks < MIN_WINDOWSIZE) {
-	*nblocks = MIN_WINDOWSIZE;
-      }
-      
-      if (*nblocks > MAX_WINDOWSIZE) {
-	*nblocks = MAX_WINDOWSIZE;
-      }
-    }
   }
   
   return 0;
