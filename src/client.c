@@ -141,7 +141,7 @@ void run(void) {
   AdresseInternet addrserv;
   ssize_t errcode;
   size_t buffer_len = (size_t) 512 + sizeof(uint16_t) * 2;
-  char buffer[buffer_len];
+  char *buffer;
   
   // Construit le paquet RRQ avec options, s'il y a.
   size_t rrqbuf_len = (size_t) 512;
@@ -155,8 +155,8 @@ void run(void) {
   // Si des options ont été spécifiées, envoie le paquet RRQ et attend le paquet OACK puis attend le premier paquet DATA.
   // Sinon, envoie le paquet RRQ et attend le premier paquet DATA
   if (blksize != (size_t) 0 || windowsize != (size_t) 0) {
-    size_t buffer_len = (size_t) blksize + sizeof(uint16_t) * 2;
-    char buffer[buffer_len];
+    buffer_len = (size_t) blksize + sizeof(uint16_t) * 2;
+    buffer = malloc(sizeof(char) * buffer_len);
     
     printf("Paquet sent -->\n");
     tftp_print(rrqbuf);
@@ -175,11 +175,15 @@ void run(void) {
       exit(EXIT_FAILURE);
     }
     
-    // Attend le premier paquet DATA    
+    buffer_len = (size_t) blksize + sizeof(uint16_t) * 2;
+    
+    // Attend le premier paquet DATA
     if ((errcode = tftp_wait_DATA_with_timeout(&sock, &addrserv, buffer, &buffer_len)) != 0) {
-      fprintf(stderr, "tftp_wait_DATA: %s\n", tftp_strerror(errcode));
+      fprintf(stderr, "tftp_wait_DATA_with_timeout: %s\n", tftp_strerror(errcode));
       exit(EXIT_FAILURE);
     }
+    
+    printf("DATA length: %lu\n", buffer_len);
     
     printf("Paquet received -->\n");
     tftp_print(buffer);
@@ -187,6 +191,7 @@ void run(void) {
   } else {
     blksize = (size_t) 512;
     windowsize = (size_t) 1;
+    buffer = malloc(sizeof(char) * 512);
     
     printf("Paquet sent -->\n");
     tftp_print(rrqbuf);
@@ -207,7 +212,7 @@ void run(void) {
     quit(EXIT_FAILURE);
   }
   
-  if (write(fd, buffer + sizeof(uint16_t) * 2, buffer_len - sizeof(uint16_t) * 2) == -1) {
+  if (write(fd, buffer + sizeof(uint16_t) * 2, blksize) == -1) {
     perror("write");
     quit(EXIT_FAILURE);
   }
@@ -233,6 +238,8 @@ void run(void) {
       fprintf(stderr, "tftp_send_ACK_wait_DATA : %s\n", tftp_strerror(errcode));
       quit(EXIT_FAILURE);
     }
+    
+    printf("DATA length: %lu\n", data_len);
     
     printf("Paquet received -->\n");
     tftp_print(data);

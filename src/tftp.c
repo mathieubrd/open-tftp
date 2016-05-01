@@ -218,11 +218,10 @@ int tftp_wait_DATA_with_timeout(SocketUDP *socket, AdresseInternet *from, char *
   }
   
   // Attend le paquet DATA
-  AdresseInternet frombuf;
-  char resbuf[*reslen];
+  AdresseInternet con_buf;
+  char res_buf[*reslen];
   size_t count;
-  
-  if ((count = recvFromSocketUDP(socket, resbuf, *reslen, &frombuf, TIMEOUT)) == (size_t) -1) {
+  if ((count = recvFromSocketUDP(socket, res_buf, *reslen, &con_buf, TIMEOUT)) == (size_t) -1) {
     if (errno == EINTR) {
       return ETIME;
     } else {
@@ -230,10 +229,10 @@ int tftp_wait_DATA_with_timeout(SocketUDP *socket, AdresseInternet *from, char *
     }
   }
   
-  if (AdresseInternet_copy(from, &frombuf) != 0) {
+  if (AdresseInternet_copy(from, &con_buf) != 0) {
     return EUNKN;
   }
-  memcpy(res, resbuf, count);
+  memcpy(res, res_buf, count);
   *reslen = count;
   
   return 0;
@@ -377,7 +376,7 @@ int tftp_send_DATA_wait_ACK(SocketUDP *socket, const AdresseInternet *dst, const
   
   while (tries <= MAX_TRIES) {
     // Attend un paquet
-    size_t length = 512;
+    size_t length = (size_t) 512;
     char buffer[length];
     if (recvFromSocketUDP(socket, buffer, length, NULL, TIMEOUT) < 0) {
       tries++;
