@@ -221,7 +221,7 @@ void run(void) {
   
   uint16_t block = 1;
   
-  if (buffer_len >= blksize) {
+  if (buffer_len == blksize) {
     while (1) {    
       // Envoie le premier paquet ACK et attend le paquet DATA
       size_t acklen = (size_t) 512;
