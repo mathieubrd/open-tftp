@@ -21,6 +21,8 @@
 struct t_rrq {
   SocketUDP *sock;
   AdresseInternet *addr;
+  char *rrqbuf;
+  size_t rrqlen;
   char *filename;
   size_t blksize;
   size_t windowsize;
@@ -89,10 +91,10 @@ void handle_sig(int sig) {
 void handle_RRQ(void) {
   // Attend une requête RRQ
   size_t rrq_len = 512;
-  char rrq_buf[rrq_len];
-  AdresseInternet addr_cli;
+  char *rrq_buf = malloc(sizeof(char) * rrq_len);
+  AdresseInternet *addr_cli = malloc(sizeof(AdresseInternet));
   
-  if (recvFromSocketUDP(sock, rrq_buf, rrq_len, &addr_cli, -1) == -1) {
+  if (recvFromSocketUDP(sock, rrq_buf, rrq_len, addr_cli, -1) == -1) {
     fprintf(stderr, "recvFromSocketUDP : impossible de recevoir le paquet.\n");
     return;
   }
@@ -106,29 +108,23 @@ void handle_RRQ(void) {
   opcode = ntohs(opcode);
   
   if (opcode != RRQ) {
-    tftp_send_error(sock, &addr_cli, ILLEG, "Le serveur attend un paquet RRQ.");
-    return;
-  }
-  
-  struct t_rrq rrq;
-  rrq.blksize = (size_t) 0;
-  rrq.windowsize = (size_t) 0;
-  
-  // Récupère les options de la requête
-  size_t errcode;
-  
-  if ((errcode = tftp_get_opt(rrq_buf, &rrq.blksize, &rrq.windowsize)) != 0) {
-    fprintf(stderr, "tftp_get_opt: %s\n", tftp_strerror(errcode));
+    tftp_send_error(sock, addr_cli, ILLEG, "Le serveur attend un paquet RRQ.");
     return;
   }
   
   // Lance le traitement du paquet RRQ dans un thread
-  rrq.sock = sock;
-  rrq.addr = &addr_cli;
-  rrq.filename = malloc(sizeof(char) * strlen(rrq_buf + sizeof(uint16_t)) + 1);
-  strncpy(rrq.filename, rrq_buf + sizeof(uint16_t), strlen(rrq_buf + sizeof(uint16_t)) + 1);
+  struct t_rrq *rrq = malloc(sizeof(struct t_rrq));
+  rrq->blksize = (size_t) 0;
+  rrq->windowsize = (size_t) 0;
+  rrq->sock = sock;
+  rrq->addr = addr_cli;
+  rrq->rrqbuf = rrq_buf;
+  rrq->rrqlen = rrq_len;
+  rrq->filename = malloc(sizeof(char) * strlen(rrq_buf + sizeof(uint16_t)) + 1);
+  strncpy(rrq->filename, rrq_buf + sizeof(uint16_t), strlen(rrq_buf + sizeof(uint16_t)) + 1);
+  
   pthread_t thread;
-  if (pthread_create(&thread, NULL, process_RRQ, &rrq) != 0) {
+  if (pthread_create(&thread, NULL, process_RRQ, rrq) != 0) {
     perror("pthread_create");
     return;
   }
@@ -172,6 +168,14 @@ void *process_RRQ(void *arg) {
   char *filename = rrq->filename;
   size_t blksize = rrq->blksize;
   size_t windowsize = rrq->windowsize;
+  
+  // Récupère les options de la requête
+  size_t errcode;
+  
+  if ((errcode = tftp_get_opt(rrq->rrqbuf, &blksize, &windowsize)) != 0) {
+    fprintf(stderr, "tftp_get_opt: %s\n", tftp_strerror(errcode));
+    return NULL;
+  }
   
   // Initialise une nouvelle socket dédiée au client
   sock_cli = malloc(sizeof(SocketUDP));
