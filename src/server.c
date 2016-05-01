@@ -193,7 +193,7 @@ void *process_RRQ(void *arg) {
       return NULL;
     }
   } else {
-    blksize = (size_t) 508;
+    blksize = (size_t) 512;
     windowsize = (size_t) 1;
   }
   
@@ -216,7 +216,7 @@ void *process_RRQ(void *arg) {
     
     while ((count = read(fd, fcontent_buf, sizeof(fcontent_buf))) > 0) {
       // Construit le paquet DATA
-      size_t data_len = blksize + 4;
+      size_t data_len = blksize + sizeof(uint16_t) * 2;
       char data_buf[data_len];
       ssize_t errcode;
       

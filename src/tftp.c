@@ -315,9 +315,9 @@ int tftp_send_RRQ_wait_DATA_with_timeout(SocketUDP *socket, const AdresseInterne
   
   // Attend la réponse
   AdresseInternet con_buf;
-  char res_buf[512];
+  char res_buf[*reslen];
   size_t count;
-  if ((count = recvFromSocketUDP(socket, res_buf, 512, &con_buf, TIMEOUT)) == (size_t) -1) {
+  if ((count = recvFromSocketUDP(socket, res_buf, *reslen, &con_buf, TIMEOUT)) == (size_t) -1) {
     if (errno == EINTR) {
       return ETIME;
     } else {
@@ -430,7 +430,7 @@ int tftp_send_ACK_wait_DATA(SocketUDP *socket, const AdresseInternet *dst, const
   size_t tries = 0;
   
   while (tries < MAX_TRIES) {
-    size_t length = 512;
+    size_t length = *reslen;
     char buffer[length];
     AdresseInternet from;
     if ((length = recvFromSocketUDP(socket, buffer, length, &from, TIMEOUT)) == (size_t) -1) {

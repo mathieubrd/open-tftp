@@ -139,13 +139,12 @@ int initSocket(void) {
 
 void run(void) {
   AdresseInternet addrserv;
-  size_t buffer_len = (size_t) 512;
-  
-  char buffer[buffer_len];
   ssize_t errcode;
+  size_t buffer_len = (size_t) 512 + sizeof(uint16_t) * 2;
+  char buffer[buffer_len];
   
   // Construit le paquet RRQ avec options, s'il y a.
-  size_t rrqbuf_len = 512;
+  size_t rrqbuf_len = (size_t) 512;
   char rrqbuf[rrqbuf_len];
   
   if ((errcode = tftp_make_rrq_opt(rrqbuf, &rrqbuf_len, filename, (size_t) blksize, (size_t) windowsize)) != 0) {
@@ -156,6 +155,9 @@ void run(void) {
   // Si des options ont été spécifiées, envoie le paquet RRQ et attend le paquet OACK puis attend le premier paquet DATA.
   // Sinon, envoie le paquet RRQ et attend le premier paquet DATA
   if (blksize != (size_t) 0 || windowsize != (size_t) 0) {
+    size_t buffer_len = (size_t) blksize + sizeof(uint16_t) * 2;
+    char buffer[buffer_len];
+    
     printf("Paquet sent -->\n");
     tftp_print(rrqbuf);
     
@@ -183,8 +185,8 @@ void run(void) {
     tftp_print(buffer);
     
   } else {
-    blksize = 508;
-    windowsize = 1;
+    blksize = (size_t) 512;
+    windowsize = (size_t) 1;
     
     printf("Paquet sent -->\n");
     tftp_print(rrqbuf);
@@ -197,10 +199,6 @@ void run(void) {
     printf("Paquet received -->\n");
     tftp_print(buffer);
   }
-
-  uint16_t block = 0;
-  memcpy(&block, buffer + sizeof(uint16_t), sizeof(uint16_t));
-  block = ntohs(block);
   
   // Ouvre le fichier
   int fd = open(destfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
@@ -214,21 +212,24 @@ void run(void) {
     quit(EXIT_FAILURE);
   }
   
-  while (1) {
+  uint16_t block = 1;
+  
+  while (1) {    
     // Envoie le premier paquet ACK et attend le paquet DATA
-    buffer_len = 512;
-    if ((errcode = tftp_make_ack(buffer, &buffer_len, block)) != 0) {
+    size_t acklen = (size_t) 512;
+    char ackbuf[acklen];
+    if ((errcode = tftp_make_ack(ackbuf, &acklen, block)) != 0) {
       fprintf(stderr, "tftp_make_ack : %s\n", tftp_strerror(errcode));
       quit(EXIT_FAILURE);
     }
     
-    size_t data_len = blksize + 4;
+    size_t data_len = blksize + sizeof(uint16_t) * 2;
     char data[data_len];
     
     printf("Paquet sent -->\n");
-    tftp_print(buffer);
+    tftp_print(ackbuf);
     
-    if ((errcode = tftp_send_ACK_wait_DATA(&sock, &addrserv, buffer, buffer_len, data, &data_len)) != 0) {
+    if ((errcode = tftp_send_ACK_wait_DATA(&sock, &addrserv, ackbuf, acklen, data, &data_len)) != 0) {
       fprintf(stderr, "tftp_send_ACK_wait_DATA : %s\n", tftp_strerror(errcode));
       quit(EXIT_FAILURE);
     }
@@ -244,7 +245,7 @@ void run(void) {
       quit(EXIT_FAILURE);
     }
     
-    if (data_len < blksize - 4) {
+    if (data_len < blksize) {
       break;
     }
   }
