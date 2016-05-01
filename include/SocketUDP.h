@@ -1,3 +1,8 @@
+/**
+ * Bibliothèque SocketUDP
+ * Auteur : Mathieu Brochard
+ */
+
 #ifndef SOCKET_UDP_H
 #define SOCKET_UDP_H
 

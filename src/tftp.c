@@ -1,3 +1,8 @@
+/**
+ * Bibliothèque TFTP
+ * Auteur : Mathieu Brochard
+ */
+
 #include <tftp.h>
 
 char *errors[] = {

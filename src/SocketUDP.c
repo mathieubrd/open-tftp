@@ -1,3 +1,8 @@
+/**
+ * Bibliothèque SocketUDP
+ * Auteur : Mathieu Brochard
+ */
+
 #include <SocketUDP.h>
 
 int initSocketUDP(SocketUDP *sock) {

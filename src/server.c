@@ -1,3 +1,8 @@
+/**
+ * Serveur TFTP
+ * Auteur : Mathieu Brochard
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>

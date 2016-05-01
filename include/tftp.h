@@ -1,3 +1,8 @@
+/**
+ * Bibliothèque TFTP
+ * Auteur : Mathieu Brochard
+ */
+
 #ifndef TFTP_H
 #define TFTP_H
 
