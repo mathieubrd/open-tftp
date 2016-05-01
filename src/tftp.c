@@ -553,6 +553,7 @@ int tftp_print_RRQ(char *packet) {
   size_t blksize = 0;
   size_t windowsize = 0;
   tftp_get_opt(packet, &blksize, &windowsize);
+  
   if (blksize != (size_t) 0) {
     printf(" - blksize: %lu", blksize);
   }
@@ -607,10 +608,19 @@ int tftp_print_OACK(char *packet) {
   
   // Récupère les options
   size_t blksize = 0;
-  tftp_get_opt(packet, &blksize, NULL);
+  size_t windowsize = 0;
+  tftp_get_opt(packet, &blksize, &windowsize);
   
   // Affiche le paquet
-  printf("OACK - blksize: %lu\n", blksize);
+  printf("OACK");
+  if (blksize != (size_t) 0) {
+    printf(" - blksize: %lu", blksize);
+  }
+  if (windowsize != (size_t) 0) {
+    printf(" - windowsize: %lu", windowsize);
+  }
+  
+  printf("\n");
   
   return 0;
 }
