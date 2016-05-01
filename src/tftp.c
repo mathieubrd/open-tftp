@@ -24,20 +24,42 @@ int tftp_get_opt(char *packet, size_t *nbytes, size_t *nblocks) {
   opcode = ntohs(opcode);
   size_t offset = sizeof(uint16_t);
   
-  if (nblocks != NULL) {
-    
-  }
-  
   char blksize[6];
+  char windowsize[6];
   
   if (opcode == RRQ) {
     offset += strlen(packet + offset) + 1;
     offset += strlen(packet + offset) + 1;
   }
   
-  offset += strlen(packet + offset) + 1;
-  memcpy(blksize, packet + offset, strlen(packet + offset) + 1);
-  *nbytes = (size_t) atoi(blksize);
+  if (nbytes != NULL) {
+    offset += strlen(packet + offset) + 1;
+    memcpy(blksize, packet + offset, strlen(packet + offset) + 1);
+    *nbytes = (size_t) atoi(blksize);
+    
+    if (*nbytes < MIN_BLKSIZE) {
+      *nbytes = MIN_BLKSIZE;
+    }
+    
+    if (*nbytes > MAX_BLKSIZE) {
+      *nbytes = MAX_BLKSIZE;
+    }
+  }
+  
+  if (nblocks != NULL) {
+    offset += strlen(packet + offset) + 1;
+    offset += strlen(packet + offset) + 1;
+    memcpy(windowsize, packet + offset, strlen(packet + offset) + 1);
+    *nblocks = (size_t) atoi(windowsize);
+    
+    if (*nblocks < MIN_WINDOWSIZE) {
+      *nblocks = MIN_WINDOWSIZE;
+    }
+    
+    if (*nblocks > MAX_WINDOWSIZE) {
+      *nblocks = MAX_WINDOWSIZE;
+    }
+  }
   
   return 0;
 }
@@ -144,8 +166,8 @@ int tftp_make_rrq_opt(char *buffer, size_t *length, const char *fichier, size_t 
   char snbytes[6];
   char snblocks[6];
   
-  sprintf(snbytes, "%zu", nbytes);
-  sprintf(snblocks, "%zu", nblocks);
+  sprintf(snbytes, "%lu", nbytes);
+  sprintf(snblocks, "%lu", nblocks);
   
   if (nbytes != (size_t) 0) {
     memcpy(buffer + *length, "blksize", strlen("blksize") + 1);
@@ -540,9 +562,13 @@ int tftp_print_RRQ(char *packet) {
   
   // Affiche les éventuelles options
   size_t blksize = 0;
-  tftp_get_opt(packet, &blksize, NULL);
-  if (blksize != 0) {
+  size_t windowsize = 0;
+  tftp_get_opt(packet, &blksize, &windowsize);
+  if (blksize != (size_t) 0) {
     printf(" - blksize: %lu", blksize);
+  }
+  if (windowsize != (size_t) 0) {
+    printf(" - windowsize: %lu", windowsize);
   }
   
   printf("\n");
